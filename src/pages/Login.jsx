@@ -1,9 +1,17 @@
 import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate();
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    console.log("Login submitted");
+    // TODO: Implement actual login logic here
+    alert("Login button clicked! (Backend integration pending)");
+  };
 
   return (
     <div className="w-full max-w-sm mx-auto animate-fade-in-up">
@@ -13,7 +21,7 @@ const Login = () => {
         <p className="text-sm text-gray-500">Enter your details to proceed further</p>
       </div>
 
-      <form className="space-y-5">
+      <form className="space-y-5" onSubmit={handleSubmit}>
         {/* Email Input */}
         <div className="space-y-1.5">
           <label className="block pl-1 text-sm font-medium text-gray-500">Email</label>

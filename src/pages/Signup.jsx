@@ -1,9 +1,16 @@
 import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate();
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // Proceed to next step
+    navigate('/signup-details');
+  };
 
   return (
     <div className="w-full max-w-sm mx-auto animate-fade-in-up">
@@ -13,7 +20,7 @@ const Signup = () => {
         <p className="text-sm text-gray-500">Enter your details to create your account</p>
       </div>
 
-      <form className="space-y-5">
+      <form className="space-y-5" onSubmit={handleSubmit}>
         {/* Name Input */}
         <div className="space-y-1.5">
             <label className="block pl-1 text-sm font-medium text-gray-500">Full Name</label>

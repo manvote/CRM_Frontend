@@ -10,10 +10,13 @@ function App() {
   return (
     <Router>
       <Routes>
+        {/* Standalone Route for Signup Details */}
+        <Route path="/signup-details" element={<SignupDetails />} />
+
+        {/* Auth Layout for other pages */}
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
-          <Route path="/signup-details" element={<SignupDetails />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/" element={<Navigate to="/login" replace />} />
         </Route>
