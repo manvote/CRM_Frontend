@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 
 import SignupDetails from './pages/SignupDetails';
+import TeamInvite from './pages/TeamInvite';
 import ForgotPassword from './pages/ForgotPassword';
 
 function App() {
@@ -12,6 +13,7 @@ function App() {
       <Routes>
         {/* Standalone Route for Signup Details */}
         <Route path="/signup-details" element={<SignupDetails />} />
+        <Route path="/team-invite" element={<TeamInvite />} />
 
         {/* Auth Layout for other pages */}
         <Route element={<AuthLayout />}>

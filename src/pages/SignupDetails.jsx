@@ -1,12 +1,15 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 
 const SignupDetails = () => {
+    const navigate = useNavigate();
+
     // We can add state handlers here later if needed
     const handleSubmit = (e) => {
         e.preventDefault();
         // Handle form submission
         console.log("Form submitted");
+        navigate('/team-invite');
     };
 
     return (
@@ -115,7 +118,7 @@ const SignupDetails = () => {
                                 Continue
                             </button>
                             <div className="text-center">
-                                <Link to="/" className="text-gray-900 text-[15px] font-medium hover:underline">
+                                <Link to="/team-invite" className="text-gray-900 text-[15px] font-medium hover:underline">
                                     Skip for now
                                 </Link>
                             </div>
