@@ -1,4 +1,4 @@
-export const leadsData = Array(50).fill({
+export const leadsData = Array(12).fill({
     name: "tamizh",
     company: "Techno",
     jobTitle: "Sales Rep",
@@ -16,6 +16,11 @@ export const leadsData = Array(50).fill({
         name: `${nameBase} ${idx + 1}`,
         company: companies[idx % 5],
         email: `${nameBase.toLowerCase()}.${idx + 1}@gmail.com`,
-        status: ['Opened', 'New', 'Interested', 'Rejected'][idx % 4]
+        status: ['Opened', 'New', 'Interested', 'Rejected'][idx % 4],
+        // New fields for Pipeline View
+        website: 'https://loom.com',
+        platform: 'Linkedin',
+        value: '50,00,000',
+        lastContacted: '2hrs ago'
     };
 });
