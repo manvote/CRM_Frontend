@@ -1,15 +1,30 @@
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
+import { Link } from "react-router-dom";
 import {
   MoreHorizontal,
   Link as LinkIcon,
   Clock,
   Linkedin,
+  Briefcase,
+  Mail,
 } from "lucide-react";
 
-const PipelineCard = ({ lead }) => {
+const PipelineCard = ({ lead, onDelete }) => {
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setShowMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
-    <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-      {/* Header */}
+    <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow relative">
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center overflow-hidden">
@@ -19,59 +34,54 @@ const PipelineCard = ({ lead }) => {
               className="w-full h-full object-cover"
             />
           </div>
-          <span className="font-semibold text-gray-900">{lead.name}</span>
+          <Link
+            to={`/leads/${lead.id}`}
+            className="font-semibold text-gray-900 hover:text-blue-600 hover:underline"
+          >
+            {lead.name}
+          </Link>
         </div>
-        <button className="text-gray-400 hover:text-gray-600">
-          <MoreHorizontal size={18} />
-        </button>
+        <div className="relative" ref={menuRef}>
+          <button
+            className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors"
+            onClick={() => setShowMenu(!showMenu)}
+          >
+            <MoreHorizontal size={18} />
+          </button>
+          {showMenu && (
+            <div className="absolute right-0 mt-1 w-36 bg-white border border-gray-200 rounded-lg shadow-lg z-10 py-1">
+              <button
+                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                onClick={() => {
+                  setShowMenu(false);
+                  onDelete(lead.id);
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Content */}
       <div className="space-y-2 mb-4 text-sm text-gray-500">
         <div className="flex items-center gap-2">
           <span className="w-4 flex justify-center text-gray-400">
-            <img
-              src="/src/assets/manovate.svg"
-              className="w-3 h-3 object-contain grayscale opacity-60"
-            />
+            <Briefcase size={14} />
           </span>
           <span>{lead.company}</span>
         </div>
 
         <div className="flex items-center gap-2">
           <span className="w-4 flex justify-center text-gray-400">
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
-              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
-            </svg>
+            <Briefcase size={14} />
           </span>
           <span>{lead.jobTitle}</span>
         </div>
 
         <div className="flex items-center gap-2">
           <span className="w-4 flex justify-center text-gray-400">
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-              <polyline points="22,6 12,13 2,6"></polyline>
-            </svg>
+            <Mail size={14} />
           </span>
           <span className="truncate">{lead.email}</span>
         </div>
@@ -81,12 +91,12 @@ const PipelineCard = ({ lead }) => {
             <LinkIcon size={14} />
           </span>
           <a
-            href={lead.website}
+            href={lead.website || "#"}
             className="text-blue-500 hover:underline truncate"
             target="_blank"
             rel="noopener noreferrer"
           >
-            {lead.website}
+            {lead.website || "No Website"}
           </a>
         </div>
 
@@ -103,7 +113,6 @@ const PipelineCard = ({ lead }) => {
         </div>
       </div>
 
-      {/* Footer */}
       <div className="flex items-center justify-end border-t border-gray-100 pt-3">
         <div className="flex items-center gap-1 text-xs text-gray-400">
           <Clock size={12} />

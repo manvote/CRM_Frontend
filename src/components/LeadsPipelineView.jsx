@@ -1,7 +1,7 @@
 import React from "react";
 import PipelineCard from "./PipelineCard";
 
-const LeadsPipelineView = ({ leads }) => {
+const LeadsPipelineView = ({ leads, onDelete }) => {
   // Columns definition based on image
   const columns = [
     {
@@ -52,7 +52,7 @@ const LeadsPipelineView = ({ leads }) => {
             {/* Column Content */}
             <div className="flex-1 overflow-y-auto pr-2 space-y-4">
               {columnLeads.map((lead) => (
-                <PipelineCard key={lead.id} lead={lead} />
+                <PipelineCard key={lead.id} lead={lead} onDelete={onDelete} />
               ))}
             </div>
           </div>

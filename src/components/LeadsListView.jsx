@@ -1,11 +1,6 @@
 import React from "react";
-import { Linkedin, User, Building2 } from "lucide-react";
-import createdOnIcon from "../assets/leads/created on.svg";
-import emailIcon from "../assets/leads/email.svg";
-import jobTitleIcon from "../assets/leads/job title.svg";
-import leadSourceIcon from "../assets/leads/lead source.svg";
-import statusIcon from "../assets/leads/status.svg";
-import urlIcon from "../assets/leads/url.svg";
+import { Link } from "react-router-dom";
+import { Linkedin } from "lucide-react";
 
 const LeadsListView = ({
   leads,
@@ -32,61 +27,31 @@ const LeadsListView = ({
                 }
               />
             </th>
-            <th
-              scope="col"
-              className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider"
-            >
-              <User size={16} />
-            </th>
-            <th
-              scope="col"
-              className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider"
-            >
-              <Building2 size={16} />
-            </th>
-            <th
-              scope="col"
-              className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider"
-            >
-              <img src={jobTitleIcon} alt="Job Title" className="w-4 h-4" />
-            </th>
-            <th
-              scope="col"
-              className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider"
-            >
-              <img src={emailIcon} alt="Email" className="w-4 h-4" />
-            </th>
-            <th
-              scope="col"
-              className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider"
-            >
-              <img src={urlIcon} alt="Urls" className="w-4 h-4" />
-            </th>
-            <th
-              scope="col"
-              className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider"
-            >
-              <img src={createdOnIcon} alt="Created on" className="w-4 h-4" />
-            </th>
-            <th
-              scope="col"
-              className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider"
-            >
-              <img src={leadSourceIcon} alt="Lead Source" className="w-4 h-4" />
-            </th>
-            <th
-              scope="col"
-              className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider"
-            >
-              <img src={statusIcon} alt="Status" className="w-4 h-4" />
-            </th>
+            {[
+              "Name",
+              "Company",
+              "Job Title",
+              "Email",
+              "Url",
+              "Created on",
+              "Lead Source",
+              "Status",
+            ].map((header) => (
+              <th
+                key={header}
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider"
+              >
+                {header}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
           {leads.length > 0 ? (
-            leads.map((lead, index) => (
+            leads.map((lead) => (
               <tr
-                key={index}
+                key={lead.id}
                 className="hover:bg-gray-50 transition-colors border-b border-gray-200 divide-x divide-gray-200"
               >
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -106,23 +71,16 @@ const LeadsListView = ({
                         className="w-6 h-6 rounded-full"
                       />
                     </div>
-                    <span className="text-sm font-medium text-gray-900">
+                    <Link
+                      to={`/leads/${lead.id}`}
+                      className="text-sm font-medium text-gray-900 hover:text-blue-600 hover:underline"
+                    >
                       {lead.name}
-                    </span>
+                    </Link>
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center gap-2">
-                    <span className="text-green-600">
-                      <img
-                        src="/src/assets/manovate.svg"
-                        className="w-4 h-4 object-contain inline-block mr-1 grayscale opacity-50"
-                      />
-                    </span>
-                    <span className="text-sm text-gray-700">
-                      {lead.company}
-                    </span>
-                  </div>
+                  <span className="text-sm text-gray-700">{lead.company}</span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {lead.jobTitle}
@@ -135,7 +93,7 @@ const LeadsListView = ({
                     href={lead.website || "#"}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1 hover:underline"
+                    className="hover:underline"
                   >
                     {lead.website || "No Website"}
                   </a>
@@ -163,7 +121,7 @@ const LeadsListView = ({
           ) : (
             <tr>
               <td colSpan="9" className="px-6 py-12 text-center text-gray-500">
-                No leads found matching your criteria.
+                No leads found.
               </td>
             </tr>
           )}

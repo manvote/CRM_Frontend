@@ -33,11 +33,10 @@ const AddLead = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const newLead = {
+    saveLead({
       name: `${formData.firstName} ${formData.lastName}`,
       ...formData,
-    };
-    saveLead(newLead);
+    });
     navigate("/leads");
   };
 
@@ -56,186 +55,102 @@ const AddLead = () => {
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label
-                htmlFor="firstName"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                First Name
-              </label>
-              <input
-                type="text"
-                id="firstName"
-                name="firstName"
-                required
-                value={formData.firstName}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                placeholder="John"
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="lastName"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Last Name
-              </label>
-              <input
-                type="text"
-                id="lastName"
-                name="lastName"
-                required
-                value={formData.lastName}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                placeholder="Doe"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Email Address
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              required
-              value={formData.email}
+            <InputGroup
+              id="firstName"
+              label="First Name"
+              value={formData.firstName}
               onChange={handleChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-              placeholder="john.doe@company.com"
+              placeholder="John"
+              required
+            />
+            <InputGroup
+              id="lastName"
+              label="Last Name"
+              value={formData.lastName}
+              onChange={handleChange}
+              placeholder="Doe"
+              required
+            />
+          </div>
+
+          <InputGroup
+            id="email"
+            label="Email Address"
+            type="email"
+            value={formData.email}
+            onChange={handleChange}
+            placeholder="john.doe@company.com"
+            required
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <InputGroup
+              id="company"
+              label="Company"
+              value={formData.company}
+              onChange={handleChange}
+              placeholder="Acme Inc."
+              required
+            />
+            <InputGroup
+              id="jobTitle"
+              label="Job Title"
+              value={formData.jobTitle}
+              onChange={handleChange}
+              placeholder="Sales Manager"
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label
-                htmlFor="company"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Company
-              </label>
-              <input
-                type="text"
-                id="company"
-                name="company"
-                required
-                value={formData.company}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                placeholder="Acme Inc."
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="jobTitle"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Job Title
-              </label>
-              <input
-                type="text"
-                id="jobTitle"
-                name="jobTitle"
-                value={formData.jobTitle}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                placeholder="Sales Manager"
-              />
-            </div>
+            <InputGroup
+              id="website"
+              label="Website URL"
+              type="url"
+              value={formData.website}
+              onChange={handleChange}
+              placeholder="https://example.com"
+            />
+            <InputGroup
+              id="value"
+              label="Lead Value (Income)"
+              value={formData.value}
+              onChange={handleChange}
+              placeholder="50,00,000"
+            />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label
-                htmlFor="website"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Website URL
-              </label>
-              <input
-                type="url"
-                id="website"
-                name="website"
-                value={formData.website}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                placeholder="https://example.com"
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="value"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Lead Value (Income)
-              </label>
-              <input
-                type="text"
-                id="value"
-                name="value"
-                value={formData.value}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                placeholder="50,00,000"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <Dropdown
-                label="Lead Source"
-                options={[
-                  "Linkedin",
-                  "Twitter",
-                  "Facebook",
-                  "Website",
-                  "Referral",
-                  "Other",
-                ]}
-                value={formData.platform}
-                onChange={(val) =>
-                  handleChange({ target: { name: "platform", value: val } })
-                }
-                placeholder="Select source"
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="createdOn"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Created On (Auto-filled)
-              </label>
-              <input
-                type="text"
-                id="createdOn"
-                name="createdOn"
-                value={formData.createdOn}
-                disabled
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed outline-none"
-              />
-            </div>
-          </div>
-
-          <div>
             <Dropdown
-              label="Status"
-              options={["New", "Opened", "Interested", "Rejected"]}
-              value={formData.status}
+              label="Lead Source"
+              options={[
+                "Linkedin",
+                "Twitter",
+                "Facebook",
+                "Website",
+                "Referral",
+                "Other",
+              ]}
+              value={formData.platform}
               onChange={(val) =>
-                handleChange({ target: { name: "status", value: val } })
+                handleChange({ target: { name: "platform", value: val } })
               }
-              placeholder="Select status"
+            />
+            <InputGroup
+              id="createdOn"
+              label="Created On"
+              value={formData.createdOn}
+              disabled
             />
           </div>
+
+          <Dropdown
+            label="Status"
+            options={["New", "Opened", "Interested", "Rejected"]}
+            value={formData.status}
+            onChange={(val) =>
+              handleChange({ target: { name: "status", value: val } })
+            }
+          />
 
           <div className="pt-4 flex items-center justify-end gap-3">
             <button
@@ -257,5 +172,25 @@ const AddLead = () => {
     </div>
   );
 };
+
+const InputGroup = ({ id, label, type = "text", ...props }) => (
+  <div>
+    <label
+      htmlFor={id}
+      className="block text-sm font-medium text-gray-700 mb-1"
+    >
+      {label}
+    </label>
+    <input
+      type={type}
+      id={id}
+      name={id}
+      className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${
+        props.disabled ? "bg-gray-50 text-gray-500" : ""
+      }`}
+      {...props}
+    />
+  </div>
+);
 
 export default AddLead;
