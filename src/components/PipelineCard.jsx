@@ -109,7 +109,19 @@ const PipelineCard = ({ lead, onDelete }) => {
 
         <div className="flex items-center gap-2 text-gray-900 font-medium">
           <span className="w-4 flex justify-center text-gray-400">₹</span>
-          <span>{lead.value}</span>
+          <span>{lead.value || "0"}</span>
+        </div>
+
+        <div className="flex items-center justify-between text-xs pt-2 border-t border-gray-50 mt-2">
+          <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
+            Source: {lead.source || "Website"}
+          </span>
+          <div className="flex items-center gap-1">
+            <span className="text-gray-400">Owner:</span>
+            <span className="font-medium text-gray-700">
+              {lead.owner || "Unassigned"}
+            </span>
+          </div>
         </div>
       </div>
 

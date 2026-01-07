@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { leadsData } from "../data/mockData";
+import { getLeads } from "../utils/leadsStorage";
+import { getDeals } from "../utils/dealsStorage";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -11,16 +12,39 @@ import {
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const [leads, setLeads] = useState([]);
+  const [deals, setDeals] = useState([]);
+
+  useEffect(() => {
+    const loadData = () => {
+      setLeads(getLeads());
+      setDeals(getDeals());
+    };
+
+    loadData();
+    window.addEventListener("storage", loadData);
+
+    return () => {
+      window.removeEventListener("storage", loadData);
+    };
+  }, []);
 
   // Stats
-  const totalLeads = leadsData.length;
-  const activeDeals = leadsData.filter((l) =>
-    ["New", "Opened", "Interested"].includes(l.status)
+  const totalLeads = leads.length;
+  const activeDeals = deals.length; // Simply count all active deals for now, or filter by specific statuses if needed
+  const inProgress = deals.filter((d) =>
+    ["Proposal", "Negotiation"].includes(d.status)
   ).length;
-  const inProgress = leadsData.filter((l) =>
-    ["Opened", "Interested"].includes(l.status)
+  const newCustomers = leads.filter(
+    (l) => l.status === "New" || l.status === "New Lead"
   ).length;
-  const newCustomers = leadsData.filter((l) => l.status === "New").length;
+
+  // Calculate Satisfaction Rate based on Won Deals / Total Closed (Won + Lost)
+  const wonDeals = deals.filter((d) => d.status === "Won").length;
+  const lostDeals = deals.filter((d) => d.status === "Lost").length;
+  const totalClosed = wonDeals + lostDeals;
+  const satisfactionRate =
+    totalClosed > 0 ? Math.round((wonDeals / totalClosed) * 100) : 0; // Default to 0 if no closed deals, or keep 100? 0 seems safer.
 
   const [tasks, setTasks] = useState([
     {
@@ -82,15 +106,13 @@ const Dashboard = () => {
         <StatCard
           label="Active Deals"
           value={activeDeals}
-          onClick={() =>
-            navigate("/leads", { state: { filterStatus: "Active" } })
-          }
+          onClick={() => navigate("/deals")}
         />
         <StatCard
           label="Deals in Progress"
           value={inProgress}
           onClick={() =>
-            navigate("/leads", { state: { filterStatus: "Progress" } })
+            navigate("/deals", { state: { filterStatus: "Progress" } })
           }
         />
         <StatCard
@@ -100,10 +122,14 @@ const Dashboard = () => {
         />
         <StatCard
           label="Customer Satisfaction Rate"
-          value="92%"
-          subValue="+2.45%"
-          subValueColor="text-green-500"
-          onClick={() => navigate("/leads", { state: { filterStatus: "All" } })}
+          value={`${satisfactionRate}%`}
+          subValue={
+            totalClosed > 0 ? `${wonDeals}/${totalClosed} Won` : "No data"
+          }
+          subValueColor={
+            satisfactionRate >= 50 ? "text-green-500" : "text-red-500"
+          }
+          onClick={() => navigate("/deals", { state: { filterStatus: "Won" } })}
         />
       </div>
 
@@ -139,14 +165,12 @@ const Dashboard = () => {
           </button>
         </div>
 
-        {/* Active Deals */}
+        {/* Active Deals - Using Leads Data Now contextually */}
         <div className="lg:col-span-8 bg-white rounded-2xl p-6 shadow-sm border border-gray-100 h-full">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-bold text-gray-800">Active Deals</h3>
             <button
-              onClick={() =>
-                navigate("/leads", { state: { filterStatus: "Active" } })
-              }
+              onClick={() => navigate("/deals")}
               className="flex items-center gap-1 text-sm bg-gray-50 hover:bg-gray-100 px-3 py-1.5 rounded-md text-gray-600"
             >
               View all <ArrowRight size={14} />
@@ -156,44 +180,39 @@ const Dashboard = () => {
             <table className="w-full">
               <thead>
                 <tr className="text-left text-sm text-gray-500 border-b border-gray-100">
-                  <th className="pb-3 font-normal">Clients</th>
-                  <th className="pb-3 font-normal">Tasks</th>
+                  <th className="pb-3 font-normal">Deal Name</th>
+                  <th className="pb-3 font-normal">Client</th>
                   <th className="pb-3 font-normal">Due date</th>
-                  <th className="pb-3 font-normal">Revenue</th>
+                  <th className="pb-3 font-normal">Value</th>
                   <th className="pb-3 font-normal">Status</th>
                 </tr>
               </thead>
               <tbody className="text-sm">
-                <DealRow
-                  avatar="https://api.dicebear.com/7.x/avataaars/svg?seed=Lena"
-                  name="Lena"
-                  email="lenaper@gmail.com"
-                  task="Summer collab..."
-                  date="Dec 12"
-                  revenue="₹11,00,000"
-                  status="In Progress"
-                  statusColor="bg-blue-100 text-blue-700"
-                />
-                <DealRow
-                  avatar="https://api.dicebear.com/7.x/avataaars/svg?seed=John"
-                  name="John"
-                  email="johndoe@gmail.com"
-                  task="Winter campaign"
-                  date="Dec 20"
-                  revenue="₹5,00,000"
-                  status="Pending"
-                  statusColor="bg-orange-100 text-orange-700"
-                />
-                <DealRow
-                  avatar="https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah"
-                  name="Sarah"
-                  email="sarah@gmail.com"
-                  task="Website redesign"
-                  date="Dec 25"
-                  revenue="₹8,50,000"
-                  status="Completed"
-                  statusColor="bg-green-100 text-green-700"
-                />
+                {deals.slice(0, 3).map((deal) => (
+                  <DealRow
+                    key={deal.id}
+                    avatar={
+                      deal.image ||
+                      `https://api.dicebear.com/7.x/initials/svg?seed=${deal.client}`
+                    }
+                    name={deal.title}
+                    email={deal.client}
+                    client={deal.client}
+                    date={deal.dueDate}
+                    revenue={`₹${Number(
+                      deal.revenue || deal.amount || 0
+                    ).toLocaleString()}`}
+                    status={deal.status}
+                    statusColor={deal.statusColor}
+                  />
+                ))}
+                {deals.length === 0 && (
+                  <tr>
+                    <td colSpan="5" className="text-center py-4 text-gray-400">
+                      No active deals found.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -208,6 +227,7 @@ const Dashboard = () => {
             Recent Activity
           </h3>
           <div className="space-y-6">
+            {/* Static for now as global activity log isn't implemented fully yet */}
             <ActivityItem
               avatar="https://api.dicebear.com/7.x/avataaars/svg?seed=Chris"
               name="Chris Daniel"
@@ -286,7 +306,7 @@ const Dashboard = () => {
           <div className="space-y-4">
             <SuggestionItem
               iconColor="bg-yellow-400"
-              text="3 deals likely too close"
+              text="3 details likely too close"
               seed="Felix"
             />
             <SuggestionItem
@@ -379,7 +399,7 @@ const DealRow = ({
   avatar,
   name,
   email,
-  task,
+  client,
   date,
   revenue,
   status,
@@ -391,12 +411,13 @@ const DealRow = ({
         <img src={avatar} alt={name} className="w-8 h-8 rounded-full" />
         <div>
           <div className="text-sm font-medium text-gray-900">{name}</div>
-          <div className="text-xs text-gray-500">{email}</div>
+          <div className="text-xs text-gray-500">{client}</div>
         </div>
       </div>
     </td>
     <td className="py-4 text-sm text-gray-700 max-w-[150px] truncate">
-      {task}
+      {email}{" "}
+      {/* Using email prop for client name/subtitle if needed, but 'client' prop is cleaner */}
     </td>
     <td className="py-4 text-sm text-gray-700">{date}</td>
     <td className="py-4 text-sm text-gray-700 font-medium">{revenue}</td>

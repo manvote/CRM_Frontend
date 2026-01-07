@@ -16,6 +16,8 @@ import Dashboard from "./pages/Dashboard";
 import Leads from "./pages/Leads";
 import AddLead from "./pages/AddLead";
 import LeadProfile from "./pages/LeadProfile";
+import Deals from "./pages/Deals";
+import Notifications from "./pages/Notifications";
 
 function App() {
   return (
@@ -30,7 +32,9 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/leads" element={<Leads />} />
           <Route path="/leads/new" element={<AddLead />} />
+          <Route path="/deals" element={<Deals />} />
           <Route path="/leads/:id" element={<LeadProfile />} />
+          <Route path="/notifications" element={<Notifications />} />
           {/* Add other dashboard routes here as they are created */}
         </Route>
 

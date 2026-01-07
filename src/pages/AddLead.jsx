@@ -16,6 +16,11 @@ const AddLead = () => {
     website: "",
     value: "",
     platform: "Linkedin",
+    street: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    country: "",
     createdOn:
       new Date().toLocaleDateString("en-GB", {
         day: "2-digit",
@@ -119,7 +124,55 @@ const AddLead = () => {
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Address Section */}
+          <div className="border-t border-gray-100 pt-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Address Info
+            </h3>
+            <div className="space-y-6">
+              <InputGroup
+                id="street"
+                label="Street"
+                value={formData.street}
+                onChange={handleChange}
+                placeholder="123 Main St"
+              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <InputGroup
+                  id="city"
+                  label="City"
+                  value={formData.city}
+                  onChange={handleChange}
+                  placeholder="New York"
+                />
+                <InputGroup
+                  id="state"
+                  label="State"
+                  value={formData.state}
+                  onChange={handleChange}
+                  placeholder="NY"
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <InputGroup
+                  id="zipCode"
+                  label="Zip Code"
+                  value={formData.zipCode}
+                  onChange={handleChange}
+                  placeholder="10001"
+                />
+                <InputGroup
+                  id="country"
+                  label="Country"
+                  value={formData.country}
+                  onChange={handleChange}
+                  placeholder="USA"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-gray-100 pt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
             <Dropdown
               label="Lead Source"
               options={[

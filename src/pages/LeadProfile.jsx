@@ -12,6 +12,9 @@ import {
   MapPin,
   User,
   X,
+  Upload,
+  Eye,
+  Trash2,
 } from "lucide-react";
 import { getLeads, updateLead } from "../utils/leadsStorage";
 
@@ -40,6 +43,23 @@ const LeadProfile = () => {
     setLead(updated);
     updateLead(updated);
     setStatusDropdownOpen(false);
+  };
+
+  const handleDeleteDocument = (docId) => {
+    if (window.confirm("Are you sure you want to delete this document?")) {
+      const updatedDocs = lead.documents.filter((d) => d.id !== docId);
+      const updatedLead = { ...lead, documents: updatedDocs };
+      setLead(updatedLead);
+      updateLead(updatedLead);
+    }
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
   const handleModalSubmit = (e) => {
@@ -88,14 +108,19 @@ const LeadProfile = () => {
         ...updated.deals,
       ];
     } else if (modalType === "document") {
-      updated.documents = [
-        {
-          id: Date.now(),
-          name: formData.name || "Document.pdf",
-          size: "1.2mb",
-        },
-        ...updated.documents,
-      ];
+      if (formData.file) {
+        const fileUrl = URL.createObjectURL(formData.file);
+        updated.documents = [
+          {
+            id: Date.now(),
+            name: formData.file.name,
+            size: formatFileSize(formData.file.size),
+            url: fileUrl,
+            type: formData.file.type,
+          },
+          ...updated.documents,
+        ];
+      }
     }
 
     setLead(updated);
@@ -183,7 +208,7 @@ const LeadProfile = () => {
                   <InfoItem
                     icon={<Calendar size={16} />}
                     label="Created on"
-                    value={lead.createdOn}
+                    value={lead.createdOn || "N/A"}
                   />
                   <StatusItem status={lead.status} />
                 </>
@@ -247,10 +272,7 @@ const LeadProfile = () => {
               {(composerTab === "activity" || composerTab === "emails") && (
                 <div>
                   <h4 className="text-sm font-semibold text-gray-900 mb-4">
-                    {" "}
-                    {composerTab === "emails"
-                      ? "Emails"
-                      : "Latest Activity"}{" "}
+                    {composerTab === "emails" ? "Emails" : "Latest Activity"}
                   </h4>
                   <div className="space-y-6 relative pl-2">
                     <div className="absolute left-[16px] top-2 bottom-2 w-0.5 bg-gray-200 border-dashed border-l-2 border-gray-200"></div>
@@ -398,7 +420,7 @@ const LeadProfile = () => {
               <div className="space-y-3 text-sm text-gray-700">
                 <div className="flex items-center gap-3">
                   <Mail size={16} className="text-gray-400" />
-                  <span>johnson@gmail.com</span>
+                  <span>{lead.email}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <Phone size={16} className="text-gray-400" />
@@ -443,16 +465,41 @@ const LeadProfile = () => {
               {lead.documents.map((doc) => (
                 <div
                   key={doc.id}
-                  className="p-3 flex items-center gap-3 bg-gray-50 rounded-lg"
+                  className="p-3 bg-gray-50 rounded-lg flex items-center justify-between group"
                 >
-                  <div className="w-8 h-auto flex items-center justify-center bg-gray-100 rounded">
-                    <FileText size={16} className="text-gray-600" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">
-                      {doc.name}
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-auto flex items-center justify-center bg-gray-100 rounded">
+                      <FileText size={16} className="text-gray-600" />
                     </div>
-                    <div className="text-xs text-gray-400">{doc.size}</div>
+                    <div className="overflow-hidden">
+                      <div
+                        className="text-sm font-medium text-gray-900 truncate max-w-[120px]"
+                        title={doc.name}
+                      >
+                        {doc.name}
+                      </div>
+                      <div className="text-xs text-gray-400">{doc.size}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {doc.url && (
+                      <a
+                        href={doc.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
+                        title="Preview"
+                      >
+                        <Eye size={14} />
+                      </a>
+                    )}
+                    <button
+                      onClick={() => handleDeleteDocument(doc.id)}
+                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
+                      title="Remove"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 </div>
               ))}
@@ -469,6 +516,9 @@ const LeadProfile = () => {
           onChange={(e) =>
             setFormData({ ...formData, [e.target.name]: e.target.value })
           }
+          onFileChange={(e) =>
+            setFormData({ ...formData, file: e.target.files[0] })
+          }
           initialData={modalType === "editProfile" ? lead : {}}
         />
       )}
@@ -476,7 +526,6 @@ const LeadProfile = () => {
   );
 };
 
-// Sub-components
 const InfoItem = ({ icon, label, value, isLink }) => (
   <div className="flex flex-col gap-1">
     <div className="flex items-center gap-2 text-gray-400">
@@ -492,7 +541,7 @@ const InfoItem = ({ icon, label, value, isLink }) => (
           {value}
         </a>
       ) : (
-        <p className="text-sm font-medium text-gray-900">{value}</p>
+        <p className="text-sm font-medium text-gray-900">{value || "--"}</p>
       )}
     </div>
   </div>
@@ -581,7 +630,14 @@ const TaskItem = ({ item }) => (
   </div>
 );
 
-const Modal = ({ type, onClose, onSubmit, onChange, initialData }) => (
+const Modal = ({
+  type,
+  onClose,
+  onSubmit,
+  onChange,
+  onFileChange,
+  initialData,
+}) => (
   <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
     <div
       className={`bg-white rounded-2xl p-6 shadow-xl relative ${
@@ -770,18 +826,29 @@ const Modal = ({ type, onClose, onSubmit, onChange, initialData }) => (
             />
           </>
         ) : (
-          <input
-            name="name"
-            placeholder="Document Name"
-            className="w-full p-2 border border-gray-200 rounded-lg text-sm"
-            onChange={onChange}
-          />
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-gray-50 transition-colors">
+            <Upload size={24} className="text-gray-400 mb-2" />
+            <label
+              htmlFor="file-upload"
+              className="text-sm font-medium text-blue-600 hover:text-blue-500 cursor-pointer"
+            >
+              <span>Click to upload</span>
+              <input
+                id="file-upload"
+                name="file-upload"
+                type="file"
+                className="sr-only"
+                onChange={onFileChange}
+              />
+            </label>
+            <p className="text-xs text-gray-500 mt-1">SVG, PNG, JPG or PDF</p>
+          </div>
         )}
         <button
           type="submit"
           className="w-full py-2.5 bg-[#344873] text-white rounded-lg font-bold text-sm hover:bg-[#2a3b5e] transition-colors"
         >
-          Save
+          {type === "document" ? "Upload" : "Save"}
         </button>
       </form>
     </div>

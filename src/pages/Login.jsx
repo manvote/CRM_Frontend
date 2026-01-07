@@ -1,52 +1,60 @@
-import { useState } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { loginUser } from "../utils/authStorage";
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
+  const [email, setEmail] = useState("");
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("Login submitted");
-    // TODO: Implement actual login logic here
-    // alert("Login button clicked! (Backend integration pending)");
-    navigate('/dashboard');
+    loginUser(email);
+    navigate("/dashboard");
   };
 
   return (
     <div className="w-full max-w-sm mx-auto animate-fade-in-up">
-      {/* Header */}
       <div className="mb-8 text-center">
-        <h2 className="mb-2 text-2xl font-bold text-gray-900">Sign Up to getting started</h2>
-        <p className="text-sm text-gray-500">Enter your details to proceed further</p>
+        <h2 className="mb-2 text-2xl font-bold text-gray-900">
+          Sign Up to getting started
+        </h2>
+        <p className="text-sm text-gray-500">
+          Enter your details to proceed further
+        </p>
       </div>
 
       <form className="space-y-5" onSubmit={handleSubmit}>
-        {/* Email Input */}
         <div className="space-y-1.5">
-          <label className="block pl-1 text-sm font-medium text-gray-500">Email</label>
+          <label className="block pl-1 text-sm font-medium text-gray-500">
+            Email
+          </label>
           <div className="relative">
             <input
               type="email"
               required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter your email"
               className="w-full px-4 py-3 pr-10 transition-all duration-200 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
             />
-            <img 
+            <img
               src="/src/assets/mail.svg"
-              alt="Email" 
+              alt="Email"
               className="absolute w-5 h-5 -translate-y-1/2 right-3 top-1/2 opacity-60"
             />
           </div>
         </div>
 
-        {/* Password Input */}
         <div className="space-y-1.5">
-          <label className="block pl-1 text-sm font-medium text-gray-500">Password</label>
+          <label className="block pl-1 text-sm font-medium text-gray-500">
+            Password
+          </label>
           <div className="relative">
             <input
-              type={showPassword ? 'text' : 'password'}
+              type={showPassword ? "text" : "password"}
               required
               placeholder="Enter your password"
               className="w-full px-4 py-3 pr-10 transition-all duration-200 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
@@ -61,21 +69,22 @@ const Login = () => {
           </div>
         </div>
 
-        {/* Options */}
         <div className="flex items-center justify-between pt-1 text-sm">
           <label className="flex items-center gap-2 text-gray-600 cursor-pointer select-none">
-            <input 
-                type="checkbox" 
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer" 
+            <input
+              type="checkbox"
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
             />
             <span className="text-gray-500">Remember for 30 days</span>
           </label>
-          <Link to="/forgot-password" className="font-medium text-blue-500 hover:text-blue-600">
+          <Link
+            to="/forgot-password"
+            className="font-medium text-blue-500 hover:text-blue-600"
+          >
             Forgot Password?
           </Link>
         </div>
 
-        {/* Submit */}
         <button
           type="submit"
           className="w-full py-3.5 text-white transition-colors duration-200 bg-[#344054] rounded-xl font-medium hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900 shadow-lg shadow-gray-900/20"
@@ -83,40 +92,61 @@ const Login = () => {
           Sign in
         </button>
 
-        {/* Divider */}
         <div className="flex items-center gap-4 py-2 relative">
-            <div className="flex-1 h-px bg-gray-200"></div>
-            <span className="text-sm text-gray-400">or</span>
-            <div className="flex-1 h-px bg-gray-200"></div>
+          <div className="flex-1 h-px bg-gray-200"></div>
+          <span className="text-sm text-gray-400">or</span>
+          <div className="flex-1 h-px bg-gray-200"></div>
         </div>
 
-        {/* Social Login */}
         <div className="flex justify-center gap-4">
-            {/* Google */}
-            <button type="button" className="flex items-center justify-center w-12 h-12 transition-colors duration-200 border border-gray-200 rounded-xl hover:bg-gray-50">
-                <img src="/src/assets/google.svg" alt="Google" className="w-6 h-6" />
-            </button>
+          <button
+            type="button"
+            className="flex items-center justify-center w-12 h-12 transition-colors duration-200 border border-gray-200 rounded-xl hover:bg-gray-50"
+          >
+            <img
+              src="/src/assets/google.svg"
+              alt="Google"
+              className="w-6 h-6"
+            />
+          </button>
 
-            {/* Apple */}
-            <button type="button" className="flex items-center justify-center w-12 h-12 text-gray-900 transition-colors duration-200 border border-gray-200 rounded-xl hover:bg-gray-50">
-                <img src="/src/assets/apple.svg" alt="Apple" className="w-6 h-6" />
-            </button>
+          <button
+            type="button"
+            className="flex items-center justify-center w-12 h-12 text-gray-900 transition-colors duration-200 border border-gray-200 rounded-xl hover:bg-gray-50"
+          >
+            <img src="/src/assets/apple.svg" alt="Apple" className="w-6 h-6" />
+          </button>
 
-            {/* LinkedIn */}
-            <button type="button" className="flex items-center justify-center w-12 h-12 text-[#0077b5] transition-colors duration-200 border border-gray-200 rounded-xl hover:bg-gray-50">
-                <img src="/src/assets/linkedin.svg" alt="LinkedIn" className="w-6 h-6" />
-            </button>
+          <button
+            type="button"
+            className="flex items-center justify-center w-12 h-12 text-[#0077b5] transition-colors duration-200 border border-gray-200 rounded-xl hover:bg-gray-50"
+          >
+            <img
+              src="/src/assets/linkedin.svg"
+              alt="LinkedIn"
+              className="w-6 h-6"
+            />
+          </button>
 
-            {/* Microsoft */}
-            <button type="button" className="flex items-center justify-center w-12 h-12 transition-colors duration-200 border border-gray-200 rounded-xl hover:bg-gray-50">
-               <img src="/src/assets/microsoft.svg" alt="Microsoft" className="w-6 h-6" />
-            </button>
+          <button
+            type="button"
+            className="flex items-center justify-center w-12 h-12 transition-colors duration-200 border border-gray-200 rounded-xl hover:bg-gray-50"
+          >
+            <img
+              src="/src/assets/microsoft.svg"
+              alt="Microsoft"
+              className="w-6 h-6"
+            />
+          </button>
         </div>
       </form>
 
       <p className="mt-8 text-sm text-center text-gray-500">
-        Don't have an account?{' '}
-        <Link to="/signup" className="font-semibold text-blue-500 hover:text-blue-600 hover:underline">
+        Don't have an account?{" "}
+        <Link
+          to="/signup"
+          className="font-semibold text-blue-500 hover:text-blue-600 hover:underline"
+        >
           Sign up
         </Link>
       </p>
