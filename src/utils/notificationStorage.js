@@ -47,6 +47,9 @@ export const addNotification = (notification) => {
   const updated = [newNotif, ...current];
   localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   window.dispatchEvent(new Event("storage")); // Trigger updates
+  window.dispatchEvent(
+    new CustomEvent("new-notification", { detail: newNotif })
+  );
   return newNotif;
 };
 
