@@ -3,46 +3,27 @@ import { Share2, List, Columns, Search, Filter, Plus } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import LeadsListView from "../components/LeadsListView";
 import LeadsPipelineView from "../components/LeadsPipelineView";
-import { leadsAPI } from "../utils/api";
+import { getLeads, deleteLeads, updateLead } from "../utils/leadsStorage";
 
 const Leads = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [leads, setLeads] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [selectedLeads, setSelectedLeads] = useState([]);
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterStatus, setFilterStatus] = useState(() => location.state?.filterStatus || "All");
-  const [prevLocationState, setPrevLocationState] = useState(location.state);
+  const [filterStatus, setFilterStatus] = useState("All");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   useEffect(() => {
-    const fetchLeads = async () => {
-      try {
-        setLoading(true);
-        const data = await leadsAPI.getLeads();
-        setLeads(Array.isArray(data) ? data : data.data || []);
-        setError(null);
-      } catch (err) {
-        console.error('Error fetching leads:', err);
-        setError(err.message);
-        setLeads([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchLeads();
+    setLeads(getLeads());
   }, []);
 
-  if (location.state !== prevLocationState) {
+  useEffect(() => {
     if (location.state?.filterStatus) {
       setFilterStatus(location.state.filterStatus);
     }
-    setPrevLocationState(location.state);
-  }
+  }, [location.state]);
 
   const filteredLeads = useMemo(() => {
     return leads.filter((lead) => {
@@ -81,15 +62,10 @@ const Leads = () => {
     );
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = (id) => {
     if (window.confirm("Are you sure you want to delete this lead?")) {
-      try {
-        await leadsAPI.deleteLead(id);
-        setLeads((prev) => prev.filter((l) => l.id !== id));
-      } catch (err) {
-        console.error('Error deleting lead:', err);
-        setError(err.message);
-      }
+      setLeads((prev) => prev.filter((l) => l.id !== id));
+      deleteLeads([id]);
     }
   };
 
@@ -136,24 +112,11 @@ const Leads = () => {
     return colors[status] || "bg-gray-100 text-gray-800";
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-gray-500">Loading leads...</div>
-      </div>
-    );
-  }
-
   return (
     <div
       className="flex flex-col h-full"
       onClick={() => isFilterOpen && setIsFilterOpen(false)}
     >
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg border border-red-200">
-          {error}
-        </div>
-      )}
       <div className="flex flex-col space-y-4 mb-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900">Leads</h1>

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/useAuth';
+import React, { useState, useEffect } from "react";
+import { getCurrentUser, logoutUser } from "../utils/authStorage";
+import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
@@ -14,21 +14,31 @@ import {
   ChevronsLeft,
   Menu,
   X,
-  LogOut
-} from 'lucide-react';
+  LogOut,
+} from "lucide-react";
 
 const DashboardLayout = () => {
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const { logout } = useAuth();
-  const navigate = useNavigate();
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const loadUser = () => {
+      const u = getCurrentUser();
+      setUser(
+        u || {
+          name: "Guest User",
+          avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Guest",
+        }
+      );
+    };
+    loadUser();
+    window.addEventListener("storage", loadUser);
+    return () => window.removeEventListener("storage", loadUser);
+  }, []);
 
   const closeSidebar = () => setIsSidebarOpen(false);
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
 
   return (
     <div className="flex h-screen bg-gray-50 font-sans text-gray-800">
@@ -134,23 +144,34 @@ const DashboardLayout = () => {
 
         {/* Bottom Actions */}
         <div className="p-4 space-y-1">
-          <NavItem to="/notifications" icon={<Bell size={20} />} label="Notification" onClick={closeSidebar} />
-          <NavItem to="/settings" icon={<Settings size={20} />} label="Settings" onClick={closeSidebar} />
-          
-          <div className="mt-6 pt-6 border-t border-gray-100 flex items-center justify-between px-3 pb-2">
-            <div className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 rounded-lg transition-colors p-1 flex-1">
-              <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center overflow-hidden">
-                  <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="User" />
-              </div>
-              <span className="font-medium text-sm text-gray-700">Manovates</span>
+          <NavItem
+            isCollapsed={isCollapsed}
+            to="/notifications"
+            icon={<Bell size={20} />}
+            label="Notification"
+            onClick={closeSidebar}
+          />
+          <NavItem
+            isCollapsed={isCollapsed}
+            to="/settings"
+            icon={<Settings size={20} />}
+            label="Settings"
+            onClick={closeSidebar}
+          />
+
+          <div
+            className={`mt-6 pt-6 border-t border-gray-100 flex items-center gap-3 px-3 pb-2 cursor-pointer hover:bg-gray-50 rounded-lg transition-colors ${
+              isCollapsed ? "justify-center" : ""
+            }`}
+          >
+            <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center overflow-hidden shrink-0">
+              <img src={user?.avatar} alt="User" />
             </div>
-            <button 
-              onClick={handleLogout}
-              className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-              title="Logout"
-            >
-              <LogOut size={18} />
-            </button>
+            {!isCollapsed && (
+              <span className="font-medium text-sm text-gray-700 truncate">
+                {user?.name}
+              </span>
+            )}
           </div>
         </div>
       </aside>

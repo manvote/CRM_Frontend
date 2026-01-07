@@ -2,12 +2,10 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
 import Dropdown from "../components/common/Dropdown";
-import { leadsAPI } from "../utils/api";
+import { saveLead } from "../utils/leadsStorage";
 
 const AddLead = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -38,22 +36,13 @@ const AddLead = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
-    try {
-      await leadsAPI.createLead({
-        name: `${formData.firstName} ${formData.lastName}`,
-        ...formData,
-      });
-      navigate("/leads");
-    } catch (err) {
-      console.error('Error creating lead:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    saveLead({
+      name: `${formData.firstName} ${formData.lastName}`,
+      ...formData,
+    });
+    navigate("/leads");
   };
 
   return (
@@ -69,11 +58,6 @@ const AddLead = () => {
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-        {error && (
-          <div className="mb-6 p-3 bg-red-50 text-red-700 rounded-lg border border-red-200">
-            {error}
-          </div>
-        )}
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <InputGroup
@@ -225,17 +209,15 @@ const AddLead = () => {
             <button
               type="button"
               onClick={() => navigate("/leads")}
-              className="px-6 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
-              disabled={loading}
+              className="px-6 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={loading}
-              className="px-6 py-2 bg-[#344873] text-white rounded-lg text-sm font-medium hover:bg-[#253860] transition-colors disabled:opacity-50"
+              className="px-6 py-2 bg-[#344873] text-white rounded-lg text-sm font-medium hover:bg-[#253860] transition-colors"
             >
-              {loading ? "Saving..." : "Save Person"}
+              Save Person
             </button>
           </div>
         </form>

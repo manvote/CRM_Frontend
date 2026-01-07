@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { dashboardAPI, leadsAPI, tasksAPI } from "../utils/api";
+import { getLeads } from "../utils/leadsStorage";
+import { getDeals } from "../utils/dealsStorage";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -11,14 +12,40 @@ import {
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [stats, setStats] = useState({
-    totalLeads: 0,
-    activeDeals: 0,
-    inProgress: 0,
-    newCustomers: 0,
-  });
+  const [leads, setLeads] = useState([]);
+  const [deals, setDeals] = useState([]);
+
+  useEffect(() => {
+    const loadData = () => {
+      setLeads(getLeads());
+      setDeals(getDeals());
+    };
+
+    loadData();
+    window.addEventListener("storage", loadData);
+
+    return () => {
+      window.removeEventListener("storage", loadData);
+    };
+  }, []);
+
+  // Stats
+  const totalLeads = leads.length;
+  const activeDeals = deals.length; // Simply count all active deals for now, or filter by specific statuses if needed
+  const inProgress = deals.filter((d) =>
+    ["Proposal", "Negotiation"].includes(d.status)
+  ).length;
+  const newCustomers = leads.filter(
+    (l) => l.status === "New" || l.status === "New Lead"
+  ).length;
+
+  // Calculate Satisfaction Rate based on Won Deals / Total Closed (Won + Lost)
+  const wonDeals = deals.filter((d) => d.status === "Won").length;
+  const lostDeals = deals.filter((d) => d.status === "Lost").length;
+  const totalClosed = wonDeals + lostDeals;
+  const satisfactionRate =
+    totalClosed > 0 ? Math.round((wonDeals / totalClosed) * 100) : 0; // Default to 0 if no closed deals, or keep 100? 0 seems safer.
+
   const [tasks, setTasks] = useState([
     {
       id: 1,
@@ -42,50 +69,6 @@ const Dashboard = () => {
       completed: false,
     },
   ]);
-
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        const [leadsData, tasksData] = await Promise.all([
-          leadsAPI.getLeads(),
-          tasksAPI.getTasks(),
-        ]);
-
-        const leadsArray = Array.isArray(leadsData) ? leadsData : leadsData.data || [];
-        const tasksArray = Array.isArray(tasksData) ? tasksData : tasksData.data || [];
-
-        const totalLeads = leadsArray.length;
-        const activeDeals = leadsArray.filter((l) =>
-          ["New", "Opened", "Interested"].includes(l.status)
-        ).length;
-        const inProgress = leadsArray.filter((l) =>
-          ["Opened", "Interested"].includes(l.status)
-        ).length;
-        const newCustomers = leadsArray.filter((l) => l.status === "New").length;
-
-        setStats({
-          totalLeads,
-          activeDeals,
-          inProgress,
-          newCustomers,
-        });
-
-        if (tasksArray.length > 0) {
-          setTasks(tasksArray);
-        }
-
-        setError(null);
-      } catch (err) {
-        console.error('Error fetching dashboard data:', err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDashboardData();
-  }, []);
 
   const toggleTask = (id) => {
     setTasks(
@@ -111,45 +94,30 @@ const Dashboard = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-gray-500">Loading dashboard...</div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
-      {error && (
-        <div className="p-3 bg-red-50 text-red-700 rounded-lg border border-red-200">
-          {error}
-        </div>
-      )}
       {/* Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <StatCard
           label="Total Leads Collected"
-          value={stats.totalLeads}
+          value={totalLeads}
           onClick={() => navigate("/leads", { state: { filterStatus: "All" } })}
         />
         <StatCard
           label="Active Deals"
-          value={stats.activeDeals}
-          onClick={() =>
-            navigate("/leads", { state: { filterStatus: "Active" } })
-          }
+          value={activeDeals}
+          onClick={() => navigate("/deals")}
         />
         <StatCard
           label="Deals in Progress"
-          value={stats.inProgress}
+          value={inProgress}
           onClick={() =>
             navigate("/deals", { state: { filterStatus: "Progress" } })
           }
         />
         <StatCard
           label="New Customers This Month"
-          value={stats.newCustomers}
+          value={newCustomers}
           onClick={() => navigate("/leads", { state: { filterStatus: "New" } })}
         />
         <StatCard
