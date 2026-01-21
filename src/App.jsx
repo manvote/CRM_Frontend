@@ -4,6 +4,8 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
+import RoleSwitcher from "./components/common/RoleSwitcher";
 import AuthLayout from "./layouts/AuthLayout";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -24,6 +26,8 @@ import Calendar from "./pages/Calendar";
 function App() {
   return (
     <Router>
+      <Toaster position="top-right" />
+      <RoleSwitcher />
       <Routes>
         {/* Standalone Route for Signup Details */}
         <Route path="/signup-details" element={<SignupDetails />} />

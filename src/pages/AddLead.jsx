@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
+import toast from "react-hot-toast";
 import Dropdown from "../components/common/Dropdown";
 import { saveLead } from "../utils/leadsStorage";
 
@@ -31,17 +32,61 @@ const AddLead = () => {
       new Date().toLocaleDateString("en-US", { weekday: "short" }),
   });
 
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
+  const [isValid, setIsValid] = useState(false);
+
+  // Validation Rules
+  const validate = (data) => {
+    const newErrors = {};
+
+    if (!data.firstName.trim()) newErrors.firstName = "First name is required";
+    if (!data.lastName.trim()) newErrors.lastName = "Last name is required";
+    if (!data.company.trim()) newErrors.company = "Company is required";
+
+    if (!data.email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+      newErrors.email = "Invalid email format";
+    }
+
+    if (data.website && !/^https?:\/\/.+/.test(data.website)) {
+      newErrors.website = "URL must start with http:// or https://";
+    }
+
+    if (data.value && isNaN(Number(data.value.replace(/,/g, "")))) {
+      newErrors.value = "Value must be a number";
+    }
+
+    return newErrors;
+  };
+
+  useEffect(() => {
+    const errorList = validate(formData);
+    setErrors(errorList);
+    setIsValid(Object.keys(errorList).length === 0);
+  }, [formData]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleBlur = (e) => {
+    const { name } = e.target;
+    setTouched((prev) => ({ ...prev, [name]: true }));
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!isValid) return;
+
     saveLead({
       name: `${formData.firstName} ${formData.lastName}`,
       ...formData,
     });
+
+    toast.success("Lead added successfully!");
     navigate("/leads");
   };
 
@@ -65,6 +110,8 @@ const AddLead = () => {
               label="First Name"
               value={formData.firstName}
               onChange={handleChange}
+              onBlur={handleBlur}
+              error={touched.firstName && errors.firstName}
               placeholder="John"
               required
             />
@@ -73,6 +120,8 @@ const AddLead = () => {
               label="Last Name"
               value={formData.lastName}
               onChange={handleChange}
+              onBlur={handleBlur}
+              error={touched.lastName && errors.lastName}
               placeholder="Doe"
               required
             />
@@ -84,6 +133,8 @@ const AddLead = () => {
             type="email"
             value={formData.email}
             onChange={handleChange}
+            onBlur={handleBlur}
+            error={touched.email && errors.email}
             placeholder="john.doe@company.com"
             required
           />
@@ -94,6 +145,8 @@ const AddLead = () => {
               label="Company"
               value={formData.company}
               onChange={handleChange}
+              onBlur={handleBlur}
+              error={touched.company && errors.company}
               placeholder="Acme Inc."
               required
             />
@@ -102,6 +155,7 @@ const AddLead = () => {
               label="Job Title"
               value={formData.jobTitle}
               onChange={handleChange}
+              onBlur={handleBlur}
               placeholder="Sales Manager"
             />
           </div>
@@ -113,6 +167,8 @@ const AddLead = () => {
               type="url"
               value={formData.website}
               onChange={handleChange}
+              onBlur={handleBlur}
+              error={touched.website && errors.website}
               placeholder="https://example.com"
             />
             <InputGroup
@@ -120,7 +176,9 @@ const AddLead = () => {
               label="Lead Value (Income)"
               value={formData.value}
               onChange={handleChange}
-              placeholder="50,00,000"
+              onBlur={handleBlur}
+              error={touched.value && errors.value}
+              placeholder="5000000"
             />
           </div>
 
@@ -215,7 +273,12 @@ const AddLead = () => {
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-[#344873] text-white rounded-lg text-sm font-medium hover:bg-[#253860] transition-colors"
+              disabled={!isValid}
+              className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors ${
+                isValid
+                  ? "bg-[#344873] text-white hover:bg-[#253860]"
+                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              }`}
             >
               Save Person
             </button>
@@ -226,23 +289,26 @@ const AddLead = () => {
   );
 };
 
-const InputGroup = ({ id, label, type = "text", ...props }) => (
+const InputGroup = ({ id, label, type = "text", error, ...props }) => (
   <div>
     <label
       htmlFor={id}
       className="block text-sm font-medium text-gray-700 mb-1"
     >
-      {label}
+      {label} {props.required && <span className="text-red-500">*</span>}
     </label>
     <input
       type={type}
       id={id}
       name={id}
-      className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${
-        props.disabled ? "bg-gray-50 text-gray-500" : ""
-      }`}
+      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 outline-none transition-all ${
+        error
+          ? "border-red-300 focus:ring-red-200 focus:border-red-500"
+          : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+      } ${props.disabled ? "bg-gray-50 text-gray-500" : ""}`}
       {...props}
     />
+    {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
   </div>
 );
 

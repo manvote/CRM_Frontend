@@ -41,12 +41,9 @@ const HOURS = Array.from({ length: 15 }, (_, i) => i + 7); // 07:00 to 21:00
 
 const Calendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [view, setView] = useState("week"); // "month", "week", "day", "list"
   const [events, setEvents] = useState([]);
   const [currentTab, setCurrentTab] = useState("All Scheduled");
-
-  // Derived Date State
-  const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 }); // Sunday start to match implied design or standard? Design days: 12 (Fri), 13 (Sat), 14 (Sun)... weird sequence in design but usually Sun/Mon start. Let's use Sunday Default.
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   // Mini Calendar State
   const [miniCalendarDate, setMiniCalendarDate] = useState(new Date());
@@ -96,8 +93,45 @@ const Calendar = () => {
   };
 
   // Navigation Handlers
-  const nextWeek = () => setCurrentDate(addWeeks(currentDate, 1));
-  const prevWeek = () => setCurrentDate(subWeeks(currentDate, 1));
+  // Navigation Handlers
+  const nextPeriod = () => {
+    switch (view) {
+      case "month":
+        setCurrentDate(addMonths(currentDate, 1));
+        break;
+      case "week":
+        setCurrentDate(addWeeks(currentDate, 1));
+        break;
+      case "day":
+        setCurrentDate(addDays(currentDate, 1));
+        break;
+      case "list":
+        setCurrentDate(addMonths(currentDate, 1));
+        break;
+      default:
+        break;
+    }
+  };
+
+  const prevPeriod = () => {
+    switch (view) {
+      case "month":
+        setCurrentDate(subMonths(currentDate, 1));
+        break;
+      case "week":
+        setCurrentDate(subWeeks(currentDate, 1));
+        break;
+      case "day":
+        setCurrentDate(addDays(currentDate, -1));
+        break;
+      case "list":
+        setCurrentDate(subMonths(currentDate, 1));
+        break;
+      default:
+        break;
+    }
+  };
+
   const today = () => {
     const now = new Date();
     setCurrentDate(now);
@@ -186,10 +220,10 @@ const Calendar = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 p-6 overflow-hidden relative">
+    <div className="flex flex-col h-full bg-slate-50 p-4 md:p-6 overflow-hidden relative">
       {/* Header */}
       <div className="flex flex-col space-y-4 mb-6 shrink-0">
-        <div className="flex justify-between items-start">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-0">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Calendar</h1>
             <p className="text-gray-500 text-sm mt-1">
@@ -252,20 +286,20 @@ const Calendar = () => {
                 {tab === "Task Reminder" && <Clock size={16} />}
                 {tab}
               </button>
-            )
+            ),
           )}
         </div>
       </div>
 
       {/* Toolbar */}
-      <div className="flex justify-between items-center mb-4 shrink-0">
-        <div className="flex items-center gap-4">
-          <h2 className="text-lg font-bold text-gray-800 w-40">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 shrink-0 gap-4 md:gap-0">
+        <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
+          <h2 className="text-lg font-bold text-gray-800 w-40 truncate">
             {format(currentDate, "MMMM yyyy")}
           </h2>
           <div className="flex items-center bg-white rounded-lg border border-gray-200 shadow-sm">
             <button
-              onClick={prevWeek}
+              onClick={prevPeriod}
               className="p-1.5 hover:bg-gray-50 text-gray-600 rounded-l-lg border-r border-gray-100"
             >
               <ChevronLeft size={18} />
@@ -277,7 +311,7 @@ const Calendar = () => {
               Today
             </button>
             <button
-              onClick={nextWeek}
+              onClick={nextPeriod}
               className="p-1.5 hover:bg-gray-50 text-gray-600 rounded-r-lg border-l border-gray-100"
             >
               <ChevronRight size={18} />
@@ -285,126 +319,64 @@ const Calendar = () => {
           </div>
         </div>
 
-        <div className="bg-gray-100 p-1 rounded-lg flex text-xs font-medium text-gray-600">
-          <button className="px-3 py-1 bg-white shadow-sm rounded-md text-gray-900">
-            Month
-          </button>
-          <button className="px-3 py-1 hover:bg-white/50 rounded-md">
-            Week
-          </button>
-          <button className="px-3 py-1 hover:bg-white/50 rounded-md">
-            Day
-          </button>
-          <button className="px-3 py-1 hover:bg-white/50 rounded-md">
-            List
-          </button>
+        <div className="bg-gray-100 p-1 rounded-lg flex text-xs font-medium text-gray-600 w-full md:w-auto justify-between md:justify-start">
+          {[
+            { id: "month", label: "Month" },
+            { id: "week", label: "Week" },
+            { id: "day", label: "Day" },
+            { id: "list", label: "List" },
+          ].map((v) => (
+            <button
+              key={v.id}
+              onClick={() => setView(v.id)}
+              className={`flex-1 md:flex-none px-3 py-1 rounded-md transition-all text-center ${
+                view === v.id
+                  ? "bg-white shadow-sm text-gray-900"
+                  : "hover:bg-white/50 text-gray-500"
+              }`}
+            >
+              {v.label}
+            </button>
+          ))}
         </div>
       </div>
 
+      {/* Main Content Area */}
       <div className="flex gap-6 flex-1 min-h-0 overflow-hidden">
-        {/* Main Grid */}
-        <div className="flex-1 bg-white rounded-xl border border-gray-200 overflow-hidden md:overflow-hidden overflow-x-auto flex flex-col shadow-sm min-h-0">
-          {/* Grid Header */}
-          <div className="grid grid-cols-[60px_1fr] border-b border-gray-200 bg-gray-50/50 min-w-[800px]">
-            <div className="p-4 text-xs font-medium text-gray-400 border-r border-gray-100 flex items-center justify-center">
-              GMT +5
-            </div>
-            <div className="grid grid-cols-7 divide-x divide-gray-100">
-              {weekDays.map((day) => (
-                <div
-                  key={day.toString()}
-                  className={`p-3 ${
-                    isSameDay(day, new Date()) ? "bg-blue-50/50" : ""
-                  }`}
-                >
-                  <div
-                    className={`text-xl font-bold ${
-                      isSameDay(day, new Date())
-                        ? "text-blue-600"
-                        : "text-gray-900"
-                    }`}
-                  >
-                    {format(day, "d")}
-                  </div>
-                  <div className="text-xs text-gray-500 uppercase tracking-wide">
-                    {format(day, "MMM, EEEE")}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Grid Body */}
-          <div className="overflow-y-auto flex-1 custom-scrollbar">
-            <div className="grid grid-cols-[60px_1fr] min-w-[800px]">
-              {/* Time Labels */}
-              <div className="border-r border-gray-100 bg-white">
-                {HOURS.map((hour) => (
-                  <div
-                    key={hour}
-                    className="h-20 border-b border-gray-100 text-xs text-gray-400 flex items-start justify-center pt-2 relative"
-                  >
-                    <span className="relative -top-3 bg-white px-1">
-                      {hour.toString().padStart(2, "0")}:00
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Slots */}
-              <div className="grid grid-cols-7 divide-x divide-gray-100 bg-white relative">
-                {/* Current Time Indicator Line (Approximate for valid day) */}
-                {/* Logic omitted for brevity, can add later */}
-
-                {/* Horizontal Lines for Hours */}
-                <div className="absolute inset-0 z-0 pointer-events-none flex flex-col">
-                  {HOURS.map((hour) => (
-                    <div
-                      key={hour}
-                      className="h-20 border-b border-gray-100 w-full"
-                    ></div>
-                  ))}
-                </div>
-
-                {weekDays.map((day) => {
-                  const dateStr = format(day, "yyyy-MM-dd");
-                  return (
-                    <div
-                      key={dateStr}
-                      className={`relative z-10 ${
-                        isSameDay(day, new Date()) ? "bg-blue-50/10" : ""
-                      }`}
-                    >
-                      {HOURS.map((hour) => {
-                        const event = getEventForSlot(dateStr, hour);
-                        return (
-                          <div
-                            key={`${dateStr}-${hour}`}
-                            className="h-20 w-full relative group cursor-pointer hover:bg-gray-50 transition-colors"
-                            onClick={() => handleSlotClick(dateStr, hour)}
-                          >
-                            {event && (
-                              <div
-                                onClick={(e) => handleEventClick(e, event)}
-                                className={`absolute inset-x-1 top-1 bottom-1 ${event.color} rounded-lg p-2 text-white shadow-sm hover:brightness-110 cursor-pointer transition-all z-20 overflow-hidden`}
-                              >
-                                <div className="text-xs font-bold leading-tight mb-0.5">
-                                  {event.start}
-                                </div>
-                                <div className="text-[10px] font-medium leading-tight truncate">
-                                  {event.title}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
+        <div className="flex-1 bg-white rounded-xl border border-gray-200 overflow-hidden flex flex-col shadow-sm min-h-0">
+          {view === "month" && (
+            <MonthView
+              currentDate={currentDate}
+              events={events}
+              onSlotClick={(date) => handleSlotClick(date, 9)}
+              onEventClick={handleEventClick}
+            />
+          )}
+          {view === "week" && (
+            <WeekView
+              currentDate={currentDate}
+              events={events}
+              onSlotClick={handleSlotClick}
+              onEventClick={handleEventClick}
+              getEventForSlot={getEventForSlot}
+            />
+          )}
+          {view === "day" && (
+            <DayView
+              currentDate={currentDate}
+              events={events}
+              onSlotClick={handleSlotClick}
+              onEventClick={handleEventClick}
+              getEventForSlot={getEventForSlot}
+            />
+          )}
+          {view === "list" && (
+            <ListView
+              currentDate={currentDate}
+              events={events}
+              onEventClick={handleEventClick}
+            />
+          )}
         </div>
 
         {/* Sidebar */}
@@ -663,6 +635,386 @@ const UserPlusIcon = ({ size }) => (
     <line x1="23" y1="11" x2="17" y2="11"></line>
   </svg>
 );
+// --- View Components ---
+
+const MonthView = ({ currentDate, events, onSlotClick, onEventClick }) => {
+  const monthStart = startOfMonth(currentDate);
+  const monthEnd = endOfMonth(monthStart);
+  const startDate = startOfWeek(monthStart);
+  const endDate = endOfWeek(monthEnd);
+  const days = eachDayOfInterval({ start: startDate, end: endDate });
+
+  const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  return (
+    <div className="flex flex-col h-full bg-white">
+      {/* Month Header (Days) */}
+      <div className="grid grid-cols-7 border-b border-gray-200 bg-gray-50">
+        {weekDays.map((d) => (
+          <div
+            key={d}
+            className="py-2 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide border-r border-gray-100 last:border-0"
+          >
+            <span className="hidden md:inline">{d}</span>
+            <span className="md:hidden">{d.charAt(0)}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Month Grid */}
+      <div className="flex-1 grid grid-cols-7 auto-rows-fr overflow-y-auto">
+        {days.map((day, idx) => {
+          const dateStr = format(day, "yyyy-MM-dd");
+          const dayEvents = events.filter((e) => e.date === dateStr);
+          const isCurrentMonth = isSameMonth(day, currentDate);
+          const isToday = isSameDay(day, new Date());
+
+          return (
+            <div
+              key={idx}
+              className={`min-h-[60px] md:min-h-[100px] border-b border-r border-gray-100 p-1 md:p-2 flex flex-col gap-1 transition-colors hover:bg-gray-50 cursor-pointer ${
+                !isCurrentMonth ? "bg-gray-50/30" : "bg-white"
+              } ${isToday ? "bg-blue-50/30" : ""}`}
+              onClick={() => onSlotClick(dateStr)} // Clicking a day opens modal for that day (default 9am)
+            >
+              <div className="flex justify-between items-start">
+                <span
+                  className={`text-sm font-semibold w-7 h-7 flex items-center justify-center rounded-full ${
+                    isToday
+                      ? "bg-blue-600 text-white"
+                      : !isCurrentMonth
+                        ? "text-gray-400"
+                        : "text-gray-700"
+                  }`}
+                >
+                  {format(day, "d")}
+                </span>
+              </div>
+              <div className="flex flex-col gap-1 mt-1 overflow-y-auto max-h-[80px] custom-scrollbar">
+                {dayEvents.map((event) => (
+                  <div
+                    key={event.id}
+                    onClick={(e) => onEventClick(e, event)}
+                    className={`text-[10px] px-1.5 py-0.5 rounded truncate ${event.color} text-white shadow-sm cursor-pointer hover:brightness-110`}
+                  >
+                    <span className="hidden md:inline">{event.title}</span>
+                    <span className="md:hidden w-1.5 h-1.5 rounded-full bg-white mx-auto block"></span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+const WeekView = ({
+  currentDate,
+  events,
+  onSlotClick,
+  onEventClick,
+  getEventForSlot,
+}) => {
+  const weekStart = startOfWeek(currentDate, { weekStartsOn: 0 });
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+
+  return (
+    <div className="flex flex-col h-full bg-white overflow-x-auto">
+      <div className="min-w-[700px] flex flex-col h-full">
+        {/* Grid Header */}
+        <div className="grid grid-cols-[60px_1fr] border-b border-gray-200 bg-gray-50/50">
+          <div className="p-4 text-xs font-medium text-gray-400 border-r border-gray-100 flex items-center justify-center">
+            GMT
+          </div>
+          <div className="grid grid-cols-7 divide-x divide-gray-100">
+            {weekDays.map((day) => (
+              <div
+                key={day.toString()}
+                className={`p-3 ${
+                  isSameDay(day, new Date()) ? "bg-blue-50/50" : ""
+                }`}
+              >
+                <div
+                  className={`text-xl font-bold ${
+                    isSameDay(day, new Date())
+                      ? "text-blue-600"
+                      : "text-gray-900"
+                  }`}
+                >
+                  {format(day, "d")}
+                </div>
+                <div className="text-xs text-gray-500 uppercase tracking-wide">
+                  {format(day, "MMM, EEEE")}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Grid Body */}
+      </div>
+      <div className="overflow-y-auto flex-1 custom-scrollbar min-w-[700px]">
+        <div className="grid grid-cols-[60px_1fr]">
+          {/* Time Labels */}
+          <div className="border-r border-gray-100 bg-white">
+            {HOURS.map((hour) => (
+              <div
+                key={hour}
+                className="h-20 border-b border-gray-100 text-xs text-gray-400 flex items-start justify-center pt-2 relative"
+              >
+                <span className="relative -top-3 bg-white px-1">
+                  {hour.toString().padStart(2, "0")}:00
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Slots */}
+          <div className="grid grid-cols-7 divide-x divide-gray-100 bg-white relative">
+            <div className="absolute inset-0 z-0 pointer-events-none flex flex-col">
+              {HOURS.map((hour) => (
+                <div
+                  key={hour}
+                  className="h-20 border-b border-gray-100 w-full"
+                ></div>
+              ))}
+            </div>
+
+            {weekDays.map((day) => {
+              const dateStr = format(day, "yyyy-MM-dd");
+              return (
+                <div
+                  key={dateStr}
+                  className={`relative z-10 ${
+                    isSameDay(day, new Date()) ? "bg-blue-50/10" : ""
+                  }`}
+                >
+                  {HOURS.map((hour) => {
+                    const event = getEventForSlot(dateStr, hour);
+                    return (
+                      <div
+                        key={`${dateStr}-${hour}`}
+                        className="h-20 w-full relative group cursor-pointer hover:bg-gray-50 transition-colors"
+                        onClick={() => onSlotClick(dateStr, hour)}
+                      >
+                        {event && (
+                          <div
+                            onClick={(e) => onEventClick(e, event)}
+                            className={`absolute inset-x-1 top-1 bottom-1 ${event.color} rounded-lg p-2 text-white shadow-sm hover:brightness-110 cursor-pointer transition-all z-20 overflow-hidden`}
+                          >
+                            <div className="text-xs font-bold leading-tight mb-0.5">
+                              {event.start}
+                            </div>
+                            <div className="text-[10px] font-medium leading-tight truncate">
+                              {event.title}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const DayView = ({
+  currentDate,
+  events,
+  onSlotClick,
+  onEventClick,
+  getEventForSlot,
+}) => {
+  const dateStr = format(currentDate, "yyyy-MM-dd");
+  const isToday = isSameDay(currentDate, new Date());
+
+  return (
+    <div className="flex flex-col h-full bg-white">
+      {/* Header */}
+      <div className="grid grid-cols-[60px_1fr] border-b border-gray-200 bg-gray-50/50">
+        <div className="p-4 text-xs font-medium text-gray-400 border-r border-gray-100 flex items-center justify-center">
+          GMT
+        </div>
+        <div className={`p-3 text-center ${isToday ? "bg-blue-50/50" : ""}`}>
+          <div
+            className={`text-2xl font-bold ${
+              isToday ? "text-blue-600" : "text-gray-900"
+            }`}
+          >
+            {format(currentDate, "d")}
+          </div>
+          <div className="text-sm text-gray-500 uppercase tracking-wide">
+            {format(currentDate, "MMMM, EEEE")}
+          </div>
+        </div>
+      </div>
+
+      {/* Body */}
+      <div className="overflow-y-auto flex-1 custom-scrollbar">
+        <div className="grid grid-cols-[60px_1fr]">
+          {/* Time Labels */}
+          <div className="border-r border-gray-100 bg-white">
+            {HOURS.map((hour) => (
+              <div
+                key={hour}
+                className="h-20 border-b border-gray-100 text-xs text-gray-400 flex items-start justify-center pt-2 relative"
+              >
+                <span className="relative -top-3 bg-white px-1">
+                  {hour.toString().padStart(2, "0")}:00
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Slots */}
+          <div className="relative bg-white">
+            <div className="absolute inset-0 z-0 pointer-events-none flex flex-col">
+              {HOURS.map((hour) => (
+                <div
+                  key={hour}
+                  className="h-20 border-b border-gray-100 w-full"
+                ></div>
+              ))}
+            </div>
+
+            <div className={`relative z-10 ${isToday ? "bg-blue-50/10" : ""}`}>
+              {HOURS.map((hour) => {
+                const event = getEventForSlot(dateStr, hour);
+                return (
+                  <div
+                    key={hour}
+                    className="h-20 w-full relative group cursor-pointer hover:bg-gray-50 transition-colors"
+                    onClick={() => onSlotClick(dateStr, hour)}
+                  >
+                    {event && (
+                      <div
+                        onClick={(e) => onEventClick(e, event)}
+                        className={`absolute inset-x-2 top-1 bottom-1 ${event.color} rounded-lg p-3 text-white shadow-sm hover:brightness-110 cursor-pointer transition-all z-20 overflow-hidden`}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="text-sm font-bold leading-tight mb-1">
+                              {event.title}
+                            </div>
+                            <div className="text-xs opacity-90">
+                              {event.start} - {event.duration}
+                            </div>
+                          </div>
+                          {event.desc && (
+                            <div className="text-xs opacity-80 hidden sm:block max-w-[50%] truncate">
+                              {event.desc}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ListView = ({ currentDate, events, onEventClick }) => {
+  // Sort events by date and time
+  const sortedEvents = [...events].sort((a, b) => {
+    if (a.date !== b.date) return a.date.localeCompare(b.date);
+    return a.start.localeCompare(b.start);
+  });
+
+  // Filter events to show only from current date onwards (optional) or all?
+  // User usually expects "Schedule" or "Agenda" view. Let's show all for the selected "Period" or just all future?
+  // Let's show events for the currently selected Month in List View for better context switching.
+  const filteredEvents = sortedEvents.filter((e) =>
+    isSameMonth(new Date(e.date), currentDate),
+  );
+
+  if (filteredEvents.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-gray-500">
+        <CalendarIcon size={48} className="mb-4 text-gray-300" />
+        <p className="text-lg font-medium">No events found for this month</p>
+      </div>
+    );
+  }
+
+  // Group by date
+  const groupedEvents = filteredEvents.reduce((acc, event) => {
+    if (!acc[event.date]) acc[event.date] = [];
+    acc[event.date].push(event);
+    return acc;
+  }, {});
+
+  return (
+    <div className="flex flex-col h-full bg-white overflow-y-auto p-6">
+      <h3 className="text-lg font-bold text-gray-800 mb-6 sticky top-0 bg-white pb-4 border-b border-gray-100 z-10">
+        Agenda for {format(currentDate, "MMMM yyyy")}
+      </h3>
+      <div className="space-y-8">
+        {Object.entries(groupedEvents).map(([date, dayEvents]) => (
+          <div key={date} className="flex gap-6">
+            <div className="w-20 text-right shrink-0">
+              <div className="text-xl font-bold text-gray-900">
+                {format(new Date(date), "d")}
+              </div>
+              <div className="text-xs text-gray-500 uppercase font-medium">
+                {format(new Date(date), "EEE")}
+              </div>
+            </div>
+            <div className="flex-1 space-y-3 pt-1">
+              {dayEvents.map((event) => (
+                <div
+                  key={event.id}
+                  onClick={(e) => onEventClick(e, event)}
+                  className={`flex items-center p-4 rounded-xl border border-gray-100 bg-white shadow-sm hover:shadow-md transition-all cursor-pointer group hover:border-${event.color.replace(
+                    "bg-",
+                    "",
+                  )}`}
+                >
+                  <div
+                    className={`w-3 h-3 rounded-full ${event.color} mr-4`}
+                  ></div>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center mb-1">
+                      <h4 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                        {event.title}
+                      </h4>
+                      <span className="text-xs font-medium text-gray-500 bg-gray-50 px-2 py-1 rounded">
+                        {event.start}
+                      </span>
+                    </div>
+                    <div className="text-sm text-gray-500 flex items-center gap-4">
+                      <span className="flex items-center gap-1">
+                        <Clock size={12} /> {event.duration}
+                      </span>
+                      {event.type && (
+                        <span className="capitalize px-1.5 py-0.5 rounded bg-gray-100 text-[10px] font-bold tracking-wide">
+                          {event.type}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // Internal icon component for MessageSquare if missing
 const MessageSquareIcon = ({ size }) => (
   <svg

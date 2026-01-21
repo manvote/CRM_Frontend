@@ -156,8 +156,8 @@ const Deals = () => {
         formData.status === "Review"
           ? "bg-purple-100 text-purple-600"
           : formData.status === "Pending"
-          ? "bg-yellow-100 text-yellow-600"
-          : "bg-blue-100 text-blue-600",
+            ? "bg-yellow-100 text-yellow-600"
+            : "bg-blue-100 text-blue-600",
       assignee: [
         { initials: formData.assigneeInitials, color: "bg-purple-500" },
       ],
@@ -222,7 +222,7 @@ const Deals = () => {
     // 1. LOCKING: Cannot move deals OUT of 'Status'
     if (sourceStage === "Status") {
       alert(
-        "Closed deals are locked and cannot be moved back to the pipeline."
+        "Closed deals are locked and cannot be moved back to the pipeline.",
       );
       return;
     }
@@ -373,7 +373,7 @@ const Deals = () => {
     }
 
     setDeals(
-      deals.map((d) => (d.id === pendingClosureDeal.id ? updatedDeal : d))
+      deals.map((d) => (d.id === pendingClosureDeal.id ? updatedDeal : d)),
     );
     updateDeal(updatedDeal);
 
@@ -818,7 +818,7 @@ const Deals = () => {
                                         <span>
                                           {deal.dueDate
                                             ? new Date(
-                                                deal.dueDate
+                                                deal.dueDate,
                                               ).toLocaleDateString("en-GB", {
                                                 day: "numeric",
                                                 month: "short",
@@ -832,7 +832,7 @@ const Deals = () => {
                                           onClick={() =>
                                             handleOpenActivity(
                                               deal,
-                                              "attachments"
+                                              "attachments",
                                             )
                                           }
                                           className="flex items-center gap-1 hover:text-blue-600"
@@ -862,7 +862,7 @@ const Deals = () => {
                                     <div className="flex items-center gap-1 text-emerald-600 text-xs font-bold">
                                       ₹{" "}
                                       {Number(
-                                        deal.revenue || deal.amount || 0
+                                        deal.revenue || deal.amount || 0,
                                       ).toLocaleString()}
                                     </div>
                                   </div>
@@ -1004,7 +1004,7 @@ const Deals = () => {
                               </p>
                             </div>
                           </div>
-                        )
+                        ),
                       )
                     ) : (
                       <div className="text-center py-8 text-gray-400 text-sm">
@@ -1084,7 +1084,7 @@ const Deals = () => {
                               </button>
                             </div>
                           </div>
-                        )
+                        ),
                       )
                     ) : (
                       <div className="text-center py-8 text-gray-400 text-sm">
