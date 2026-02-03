@@ -25,12 +25,7 @@ import {
   Layers,
 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import {
-  getTasks,
-  saveTask,
-  updateTask,
-  deleteTask,
-} from "../utils/tasksStorage";
+import { tasksApi } from "../services/tasksApi";
 
 const KANBAN_COLUMNS = ["To Do", "In Progress", "Review", "Done"];
 
@@ -40,6 +35,8 @@ const Tasks = () => {
   const [filterStatus, setFilterStatus] = useState("All");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   // Activity Modal State
   const [activityModalOpen, setActivityModalOpen] = useState(false);
@@ -135,14 +132,36 @@ const Tasks = () => {
     });
   }, [searchQuery, filterStatus, tasks, selectedTab]);
 
+  // Fetch tasks from backend
+  const fetchTasks = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      
+      // Debug: Check if token exists
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        setError("Not authenticated. Please log in.");
+        setLoading(false);
+        return;
+      }
+      
+      const response = await tasksApi.getTasks();
+      setTasks(response.data);
+    } catch (err) {
+      console.error("Error fetching tasks:", err);
+      console.error("Error response:", err.response?.data);
+      setError(err.response?.data?.detail || "Failed to load tasks");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    setTasks(getTasks());
-    const handleStorageChange = () => setTasks(getTasks());
-    window.addEventListener("storage", handleStorageChange);
+    fetchTasks();
     const handleClickOutside = () => setActiveActionId(null);
     window.addEventListener("click", handleClickOutside);
     return () => {
-      window.removeEventListener("storage", handleStorageChange);
       window.removeEventListener("click", handleClickOutside);
     };
   }, []);
@@ -183,62 +202,41 @@ const Tasks = () => {
 
   const handleSaveTask = async (e) => {
     e.preventDefault();
+    setLoading(true);
 
-    let imageBase64 = null;
-    if (formData.file) {
-      imageBase64 = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.readAsDataURL(formData.file);
-      });
-    }
-
-    const commonData = {
-      ...formData,
-      priorityColor:
-        formData.priority === "Critical"
-          ? "bg-purple-100 text-purple-600"
-          : formData.priority === "High"
-          ? "bg-red-100 text-red-600"
-          : "bg-blue-100 text-blue-600",
-      assignee: [
-        { initials: formData.assigneeInitials, color: "bg-purple-500" },
-      ],
-    };
-
-    if (editingTaskId) {
-      const originalTask = tasks.find((t) => t.id === editingTaskId);
-      const updatedTask = {
-        id: editingTaskId,
-        ...commonData,
-        activity: originalTask
-          ? originalTask.activity
-          : { comments: 0, attachments: 0 },
-      };
-
-      if (originalTask && !imageBase64) {
-        updatedTask.image = originalTask.image;
-      } else if (imageBase64) {
-        updatedTask.image = imageBase64;
+    try {
+      if (editingTaskId) {
+        // Update existing task
+        await tasksApi.updateTask(editingTaskId, formData);
+      } else {
+        // Create new task
+        await tasksApi.createTask(formData);
       }
 
-      updateTask(updatedTask);
-    } else {
-      const newTask = {
-        ...commonData,
-        image: imageBase64,
-        activity: { comments: 0, attachments: 0 },
-      };
-      saveTask(newTask);
+      await fetchTasks(); // Refresh task list
+      setIsModalOpen(false);
+      setError("");
+    } catch (err) {
+      console.error("Error saving task:", err);
+      setError(err.response?.data?.detail || "Failed to save task");
+    } finally {
+      setLoading(false);
     }
-
-    setIsModalOpen(false);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this task?")) {
-      deleteTask(id);
-      setTasks(getTasks());
+      try {
+        setLoading(true);
+        await tasksApi.deleteTask(id);
+        await fetchTasks(); // Refresh task list
+        setError("");
+      } catch (err) {
+        console.error("Error deleting task:", err);
+        setError("Failed to delete task");
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -247,7 +245,7 @@ const Tasks = () => {
     setActiveActionId(activeActionId === id ? null : id);
   };
 
-  const onDragEnd = (result) => {
+  const onDragEnd = async (result) => {
     const { destination, source, draggableId } = result;
 
     if (!destination) return;
@@ -263,11 +261,19 @@ const Tasks = () => {
 
     const taskToUpdate = tasks.find((t) => t.id === taskId);
     if (taskToUpdate) {
-      const updatedTask = { ...taskToUpdate, stage: destStage };
-
       // Update local state immediately for responsiveness
+      const updatedTask = { ...taskToUpdate, stage: destStage };
       setTasks(tasks.map((t) => (t.id === taskId ? updatedTask : t)));
-      updateTask(updatedTask);
+
+      // Update backend
+      try {
+        await tasksApi.updateTask(taskId, { stage: destStage });
+      } catch (err) {
+        console.error("Error updating task stage:", err);
+        // Revert on error
+        setTasks(tasks);
+        setError("Failed to update task stage");
+      }
     }
   };
 
@@ -277,103 +283,94 @@ const Tasks = () => {
     setActivityModalOpen(true);
   };
 
-  const handleAddComment = (text) => {
+  const handleAddComment = async (text) => {
     if (!currentActivityTask) return;
-    const newComment = {
-      id: Date.now(),
-      text,
-      author: "You",
-      date: new Date().toLocaleDateString(),
-      initials: "YO",
-    };
 
-    const updatedTask = {
-      ...currentActivityTask,
-      activity: {
-        ...currentActivityTask.activity,
-        commentsList: [
-          newComment,
-          ...(currentActivityTask.activity.commentsList || []),
-        ],
-      },
-    };
-
-    setTasks(tasks.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
-    updateTask(updatedTask);
-    setCurrentActivityTask(updatedTask);
+    try {
+      await tasksApi.addComment(currentActivityTask.id, text);
+      
+      // Refresh task data
+      const response = await tasksApi.getTask(currentActivityTask.id);
+      const updatedTask = response.data;
+      
+      setTasks(tasks.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
+      setCurrentActivityTask(updatedTask);
+    } catch (err) {
+      console.error("Error adding comment:", err);
+      setError("Failed to add comment");
+    }
   };
 
-  const handleFileSelect = (e) => {
+  const handleFileSelect = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      alert("File size exceeds 2MB limit for local storage.");
+    if (file.size > 5 * 1024 * 1024) {
+      alert("File size exceeds 5MB limit.");
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      handleAddAttachment(file, event.target.result);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleAddAttachment = (file, fileData) => {
-    if (!currentActivityTask) return;
-    const newAttachment = {
-      id: Date.now(),
-      name: file.name,
-      size: (file.size / 1024).toFixed(1) + " KB",
-      date: new Date().toLocaleDateString(),
-      type: file.type,
-      data: fileData,
-    };
-
-    const updatedTask = {
-      ...currentActivityTask,
-      activity: {
-        ...currentActivityTask.activity,
-        attachmentsList: [
-          newAttachment,
-          ...(currentActivityTask.activity.attachmentsList || []),
-        ],
-      },
-    };
-
-    setTasks(tasks.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
-    updateTask(updatedTask);
-    setCurrentActivityTask(updatedTask);
-  };
-
-  const handleDeleteAttachment = (attachmentId) => {
     if (!currentActivityTask) return;
 
-    const updatedList = (
-      currentActivityTask.activity.attachmentsList || []
-    ).filter((a) => a.id !== attachmentId);
+    try {
+      await tasksApi.addAttachment(currentActivityTask.id, file);
+      
+      // Refresh task data
+      const response = await tasksApi.getTask(currentActivityTask.id);
+      const updatedTask = response.data;
+      
+      setTasks(tasks.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
+      setCurrentActivityTask(updatedTask);
+    } catch (err) {
+      console.error("Error adding attachment:", err);
+      setError("Failed to add attachment");
+    }
+  };
 
-    const updatedTask = {
-      ...currentActivityTask,
-      activity: {
-        ...currentActivityTask.activity,
-        attachmentsList: updatedList,
-      },
-    };
+  const handleDeleteAttachment = async (attachmentId) => {
+    if (!currentActivityTask) return;
 
-    setTasks(tasks.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
-    updateTask(updatedTask);
-    setCurrentActivityTask(updatedTask);
+    if (!window.confirm("Are you sure you want to delete this attachment?")) {
+      return;
+    }
+
+    try {
+      await tasksApi.deleteAttachment(currentActivityTask.id, attachmentId);
+      
+      // Refresh task data
+      const response = await tasksApi.getTask(currentActivityTask.id);
+      const updatedTask = response.data;
+      
+      setTasks(tasks.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
+      setCurrentActivityTask(updatedTask);
+    } catch (err) {
+      console.error("Error deleting attachment:", err);
+      setError("Failed to delete attachment");
+    }
   };
 
   return (
     <div className="flex flex-col min-h-full bg-white p-6">
+      {/* Error Alert */}
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between">
+          <span className="text-sm text-red-600">{error}</span>
+          <button
+            onClick={() => setError("")}
+            className="text-red-400 hover:text-red-600"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 shrink-0 gap-4 sm:gap-0">
         <h1 className="text-2xl font-bold text-gray-900">Tasks</h1>
         <button
           onClick={handleOpenCreate}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-[#344873] text-white rounded-lg hover:bg-[#253860] transition-colors"
+          disabled={loading}
+          className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-[#344873] text-white rounded-lg hover:bg-[#253860] transition-colors disabled:opacity-50"
         >
           <Plus size={18} /> Add New Task
         </button>
@@ -488,8 +485,15 @@ const Tasks = () => {
         </div>
       </div>
 
+      {/* Loading State */}
+      {loading && filteredTasks.length === 0 && (
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      )}
+
       {/* Content Area */}
-      {view === "table" ? (
+      {!loading && view === "table" ? (
         <div className="w-full bg-gray-50 sm:bg-white rounded-lg border-0 sm:border border-gray-200">
           {/* Mobile Card View */}
           <div className="sm:hidden space-y-4 pb-20">
@@ -710,7 +714,9 @@ const Tasks = () => {
             </div>
           )}
         </div>
-      ) : (
+      ) : null}
+
+      {!loading && view === "kanban" && (
         // KANBAN VIEW
         <div className="flex-1 overflow-x-auto pb-4 scroll-smooth">
           <DragDropContext onDragEnd={onDragEnd}>
@@ -1027,9 +1033,14 @@ const Tasks = () => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2.5 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200"
+                  disabled={loading}
+                  className="flex-1 px-4 py-2.5 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200 disabled:opacity-50"
                 >
-                  {editingTaskId ? "Save Changes" : "Create Task"}
+                  {loading
+                    ? "Saving..."
+                    : editingTaskId
+                    ? "Save Changes"
+                    : "Create Task"}
                 </button>
               </div>
             </form>

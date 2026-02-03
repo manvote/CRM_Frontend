@@ -16,7 +16,7 @@ import {
   Eye,
   Trash2,
 } from "lucide-react";
-import { getLeads, updateLead } from "../utils/leadsStorage";
+import { leadsApi } from "../services/leadsApi";
 
 const LeadProfile = () => {
   const { id } = useParams();
@@ -29,20 +29,67 @@ const LeadProfile = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState("");
   const [formData, setFormData] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const normalizeLead = (data) => ({
+    ...data,
+    status: data.stage ?? data.status,
+    jobTitle: data.position ?? data.jobTitle,
+    platform: data.source ?? data.platform,
+    createdOn: data.created_at
+      ? new Date(data.created_at).toLocaleDateString("en-GB")
+      : data.createdOn,
+    activities: data.activities || [],
+    deals: data.deals || [],
+    documents: data.documents || [],
+  });
+
+  const fetchLead = async () => {
+    try {
+      setLoading(true);
+      const response = await leadsApi.getLead(id);
+      setLead(normalizeLead(response.data));
+    } catch (err) {
+      console.error("Error fetching lead:", err);
+      setError("Failed to load lead");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const leads = getLeads();
-    const foundLead = leads.find((l) => l.id.toString() === id);
-    if (foundLead) setLead(foundLead);
+    fetchLead();
   }, [id]);
 
-  if (!lead) return <div className="p-8">Loading...</div>;
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+    </div>
+  );
 
-  const handleStatusChange = (newStatus) => {
-    const updated = { ...lead, status: newStatus };
-    setLead(updated);
-    updateLead(updated);
-    setStatusDropdownOpen(false);
+  if (!lead) return <div className="p-8">Lead not found</div>;
+
+  const handleStatusChange = async (newStatus) => {
+    try {
+      await leadsApi.updateLead(lead.id, { stage: newStatus });
+      setLead({ ...lead, status: newStatus, stage: newStatus });
+      setStatusDropdownOpen(false);
+    } catch (err) {
+      console.error("Error updating status:", err);
+      setError("Failed to update status");
+    }
+  };
+
+  const updateLeadDetails = async (updates) => {
+    try {
+      await leadsApi.updateLead(lead.id, updates);
+      setLead((prev) => ({ ...prev, ...updates }));
+      setError("");
+    } catch (err) {
+      console.error("Error updating lead:", err);
+      setError("Failed to update lead");
+    }
   };
 
   const handleDeleteDocument = (docId) => {
@@ -50,7 +97,6 @@ const LeadProfile = () => {
       const updatedDocs = lead.documents.filter((d) => d.id !== docId);
       const updatedLead = { ...lead, documents: updatedDocs };
       setLead(updatedLead);
-      updateLead(updatedLead);
     }
   };
 
@@ -70,6 +116,13 @@ const LeadProfile = () => {
       Object.keys(formData).forEach((key) => {
         if (formData[key]) updated[key] = formData[key];
       });
+      const updatesForApi = {
+        name: updated.name,
+        company: updated.company,
+        position: updated.jobTitle,
+        value: updated.value,
+      };
+      updateLeadDetails(updatesForApi);
     } else if (modalType === "task") {
       updated.activities = [
         {
@@ -124,7 +177,6 @@ const LeadProfile = () => {
     }
 
     setLead(updated);
-    updateLead(updated);
     setIsModalOpen(false);
   };
 
@@ -136,6 +188,17 @@ const LeadProfile = () => {
 
   return (
     <div className="flex flex-col h-full bg-gray-50 p-6 overflow-auto">
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between">
+          <span className="text-sm text-red-600">{error}</span>
+          <button
+            onClick={() => setError("")}
+            className="text-red-400 hover:text-red-600"
+          >
+            ×
+          </button>
+        </div>
+      )}
       <div className="mb-4">
         <button
           onClick={() => navigate("/leads")}
@@ -358,8 +421,12 @@ const LeadProfile = () => {
                   className={`w-3 h-3 rounded-full ${
                     lead.status === "Opened"
                       ? "bg-yellow-400"
-                      : lead.status === "Contacted"
-                      ? "bg-blue-400"
+                      : lead.status === "New"
+                      ? "bg-green-400"
+                      : lead.status === "Interested"
+                      ? "bg-purple-400"
+                      : lead.status === "Rejected"
+                      ? "bg-red-400"
                       : "bg-gray-400"
                   }`}
                 ></div>
@@ -375,7 +442,7 @@ const LeadProfile = () => {
             </div>
             {statusDropdownOpen && (
               <div className="absolute top-12 left-0 w-full bg-white border border-gray-100 rounded-xl shadow-lg z-20 overflow-hidden">
-                {["Opened", "Contacted", "Qualified", "Lost", "Closed"].map(
+                {["New", "Opened", "Interested", "Rejected", "Closed"].map(
                   (status) => (
                     <div
                       key={status}
@@ -386,10 +453,12 @@ const LeadProfile = () => {
                         className={`w-2 h-2 rounded-full ${
                           status === "Opened"
                             ? "bg-yellow-400"
-                            : status === "Contacted"
-                            ? "bg-blue-400"
-                            : status === "Qualified"
+                            : status === "New"
                             ? "bg-green-400"
+                            : status === "Interested"
+                            ? "bg-purple-400"
+                            : status === "Rejected"
+                            ? "bg-red-400"
                             : "bg-gray-300"
                         }`}
                       ></div>

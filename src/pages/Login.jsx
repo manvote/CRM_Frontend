@@ -2,150 +2,116 @@ import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { loginUser } from "../utils/authStorage";
+import { authApiService } from "../services/authApi";
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState("");
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    loginUser(email);
-    navigate("/dashboard");
+
+    // 🛑 Prevent double submit (StrictMode / double click)
+    if (loading) return;
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await authApiService.login(email, password);
+
+      // ✅ SUCCESS - loginUser now handles tokens and user data
+      loginUser(response.data);
+      setError("");               // clear any old error
+      navigate("/dashboard");     // redirect
+    } catch (err) {
+      setError(
+        err.response?.data?.detail ||
+          "Login failed. Please check your credentials."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="w-full max-w-sm mx-auto animate-fade-in-up">
       <div className="mb-8 text-center">
         <h2 className="mb-2 text-2xl font-bold text-gray-900">
-          Sign Up to getting started
+          Sign in to get started
         </h2>
         <p className="text-sm text-gray-500">
-          Enter your details to proceed further
+          Enter your credentials to continue
         </p>
       </div>
 
+      {/* Error */}
+      {error && (
+        <div className="mb-4 p-3 text-sm text-red-600 bg-red-50 rounded-lg">
+          {error}
+        </div>
+      )}
+
       <form className="space-y-5" onSubmit={handleSubmit}>
+        {/* Email */}
         <div className="space-y-1.5">
-          <label className="block pl-1 text-sm font-medium text-gray-500">
+          <label className="block text-sm font-medium text-gray-500">
             Email
           </label>
-          <div className="relative">
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email"
-              className="w-full px-4 py-3 pr-10 transition-all duration-200 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-            />
-            <img
-              src="/src/assets/mail.svg"
-              alt="Email"
-              className="absolute w-5 h-5 -translate-y-1/2 right-3 top-1/2 opacity-60"
-            />
-          </div>
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Enter your email"
+            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+          />
         </div>
 
+        {/* Password */}
         <div className="space-y-1.5">
-          <label className="block pl-1 text-sm font-medium text-gray-500">
+          <label className="block text-sm font-medium text-gray-500">
             Password
           </label>
           <div className="relative">
             <input
               type={showPassword ? "text" : "password"}
               required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter your password"
-              className="w-full px-4 py-3 pr-10 transition-all duration-200 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl pr-10 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute -translate-y-1/2 right-3 top-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
             >
               {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
           </div>
         </div>
 
-        <div className="flex items-center justify-between pt-1 text-sm">
-          <label className="flex items-center gap-2 text-gray-600 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
-            />
-            <span className="text-gray-500">Remember for 30 days</span>
-          </label>
-          <Link
-            to="/forgot-password"
-            className="font-medium text-blue-500 hover:text-blue-600"
-          >
-            Forgot Password?
-          </Link>
-        </div>
-
+        {/* Submit */}
         <button
           type="submit"
-          className="w-full py-3.5 text-white transition-colors duration-200 bg-[#344054] rounded-xl font-medium hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900 shadow-lg shadow-gray-900/20"
+          disabled={loading}
+          className="w-full py-3.5 text-white bg-[#344054] rounded-xl hover:bg-gray-800 transition disabled:opacity-60"
         >
-          Sign in
+          {loading ? "Signing in..." : "Sign in"}
         </button>
-
-        <div className="flex items-center gap-4 py-2 relative">
-          <div className="flex-1 h-px bg-gray-200"></div>
-          <span className="text-sm text-gray-400">or</span>
-          <div className="flex-1 h-px bg-gray-200"></div>
-        </div>
-
-        <div className="flex justify-center gap-4">
-          <button
-            type="button"
-            className="flex items-center justify-center w-12 h-12 transition-colors duration-200 border border-gray-200 rounded-xl hover:bg-gray-50"
-          >
-            <img
-              src="/src/assets/google.svg"
-              alt="Google"
-              className="w-6 h-6"
-            />
-          </button>
-
-          <button
-            type="button"
-            className="flex items-center justify-center w-12 h-12 text-gray-900 transition-colors duration-200 border border-gray-200 rounded-xl hover:bg-gray-50"
-          >
-            <img src="/src/assets/apple.svg" alt="Apple" className="w-6 h-6" />
-          </button>
-
-          <button
-            type="button"
-            className="flex items-center justify-center w-12 h-12 text-[#0077b5] transition-colors duration-200 border border-gray-200 rounded-xl hover:bg-gray-50"
-          >
-            <img
-              src="/src/assets/linkedin.svg"
-              alt="LinkedIn"
-              className="w-6 h-6"
-            />
-          </button>
-
-          <button
-            type="button"
-            className="flex items-center justify-center w-12 h-12 transition-colors duration-200 border border-gray-200 rounded-xl hover:bg-gray-50"
-          >
-            <img
-              src="/src/assets/microsoft.svg"
-              alt="Microsoft"
-              className="w-6 h-6"
-            />
-          </button>
-        </div>
       </form>
 
       <p className="mt-8 text-sm text-center text-gray-500">
-        Don't have an account?{" "}
+        Don’t have an account?{" "}
         <Link
           to="/signup"
-          className="font-semibold text-blue-500 hover:text-blue-600 hover:underline"
+          className="font-semibold text-blue-500 hover:underline"
         >
           Sign up
         </Link>

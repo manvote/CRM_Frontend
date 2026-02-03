@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getLeads } from "../utils/leadsStorage";
-import { getDeals } from "../utils/dealsStorage";
+import { dealsApi } from "../services/dealsApi";
+import { leadsApi } from "../services/leadsApi";
+import { tasksApi } from "../services/tasksApi";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -14,20 +15,37 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [leads, setLeads] = useState([]);
   const [deals, setDeals] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const loadData = () => {
-      setLeads(getLeads());
-      setDeals(getDeals());
-    };
-
-    loadData();
-    window.addEventListener("storage", loadData);
-
-    return () => {
-      window.removeEventListener("storage", loadData);
-    };
+    fetchAllData();
   }, []);
+
+  const fetchAllData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Fetch deals
+      const dealsResponse = await dealsApi.getDeals();
+      setDeals(dealsResponse.data || []);
+
+      // Fetch leads
+      const leadsResponse = await leadsApi.getLeads();
+      setLeads(leadsResponse.data || []);
+
+      // Fetch tasks
+      const tasksResponse = await tasksApi.getTasks();
+      setTasks(tasksResponse.data || []);
+    } catch (err) {
+      console.error("Error fetching dashboard data:", err);
+      setError(err.response?.data?.detail || "Failed to load dashboard data");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Stats
   const totalLeads = leads.length;
@@ -40,35 +58,11 @@ const Dashboard = () => {
   ).length;
 
   // Calculate Satisfaction Rate based on Won Deals / Total Closed (Won + Lost)
-  const wonDeals = deals.filter((d) => d.status === "Won").length;
-  const lostDeals = deals.filter((d) => d.status === "Lost").length;
+  const wonDeals = deals.filter((d) => d.status === "won").length;
+  const lostDeals = deals.filter((d) => d.status === "lost").length;
   const totalClosed = wonDeals + lostDeals;
   const satisfactionRate =
-    totalClosed > 0 ? Math.round((wonDeals / totalClosed) * 100) : 0; // Default to 0 if no closed deals, or keep 100? 0 seems safer.
-
-  const [tasks, setTasks] = useState([
-    {
-      id: 1,
-      title: "Schedule product demo call",
-      tag: "ABC Constructions",
-      tagColor: "bg-blue-50 text-blue-700",
-      completed: false,
-    },
-    {
-      id: 2,
-      title: "Send proposal document",
-      tag: "Interiors",
-      tagColor: "bg-purple-50 text-purple-700",
-      completed: false,
-    },
-    {
-      id: 3,
-      title: "Review deal notes & attachments",
-      tag: "Enterprises",
-      tagColor: "bg-indigo-50 text-indigo-700",
-      completed: false,
-    },
-  ]);
+    totalClosed > 0 ? Math.round((wonDeals / totalClosed) * 100) : 0;
 
   const toggleTask = (id) => {
     setTasks(
@@ -96,6 +90,20 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6">
+      {/* Loading State */}
+      {loading && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+          Loading dashboard data...
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+          ⚠️ {error}
+        </div>
+      )}
+
       {/* Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <StatCard
@@ -192,18 +200,24 @@ const Dashboard = () => {
                   <DealRow
                     key={deal.id}
                     avatar={
-                      deal.image ||
+                      deal.file ||
                       `https://api.dicebear.com/7.x/initials/svg?seed=${deal.client}`
                     }
                     name={deal.title}
                     email={deal.client}
                     client={deal.client}
-                    date={deal.dueDate}
-                    revenue={`₹${Number(
-                      deal.revenue || deal.amount || 0
-                    ).toLocaleString()}`}
-                    status={deal.status}
-                    statusColor={deal.statusColor}
+                    date={deal.due_date || "N/A"}
+                    revenue={`₹${Number(deal.amount || 0).toLocaleString()}`}
+                    status={deal.status?.charAt(0).toUpperCase() + deal.status?.slice(1) || "Active"}
+                    statusColor={
+                      deal.status === "won"
+                        ? "bg-green-100 text-green-800"
+                        : deal.status === "lost"
+                        ? "bg-red-100 text-red-800"
+                        : deal.status === "active"
+                        ? "bg-blue-100 text-blue-800"
+                        : "bg-gray-100 text-gray-800"
+                    }
                   />
                 ))}
                 {deals.length === 0 && (

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
 import Dropdown from "../components/common/Dropdown";
-import { saveLead } from "../utils/leadsStorage";
+import { leadsApi } from "../services/leadsApi";
 
 const AddLead = () => {
   const navigate = useNavigate();
@@ -30,23 +30,82 @@ const AddLead = () => {
       " - " +
       new Date().toLocaleDateString("en-US", { weekday: "short" }),
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  const mapFieldName = (name) => {
+    const mapping = {
+      firstName: "name",
+      lastName: "name",
+      jobTitle: "position",
+      platform: "source",
+      status: "stage",
+    };
+    return mapping[name] || name;
+  };
+
+  const getErrorMessage = (value) =>
+    Array.isArray(value) ? value.join(" ") : value;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    const mapped = mapFieldName(name);
+    setFieldErrors((prev) => ({ ...prev, [mapped]: undefined }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    saveLead({
-      name: `${formData.firstName} ${formData.lastName}`,
-      ...formData,
-    });
-    navigate("/leads");
+    
+    try {
+      setLoading(true);
+      setError("");
+      setFieldErrors({});
+      
+      await leadsApi.createLead({
+        name: `${formData.firstName} ${formData.lastName}`,
+        email: formData.email,
+        phone: formData.phone || "",
+        company: formData.company,
+        position: formData.jobTitle,
+        stage: formData.status,
+        status: "Active",
+        source: formData.platform,
+        value: formData.value || "0",
+        notes: `Address: ${formData.street}, ${formData.city}, ${formData.state}, ${formData.zipCode}, ${formData.country}`,
+      });
+      
+      navigate("/leads");
+    } catch (err) {
+      console.error("Error creating lead:", err);
+      const responseErrors = err.response?.data;
+      if (responseErrors && typeof responseErrors === "object") {
+        setFieldErrors(responseErrors);
+        const firstError = Object.values(responseErrors).flat()?.[0];
+        setError(firstError || "Failed to create lead");
+      } else {
+        setError("Failed to create lead");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="max-w-2xl mx-auto">
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between">
+            <span className="text-sm text-red-600">{error}</span>
+            <button
+              onClick={() => setError("")}
+              className="text-red-400 hover:text-red-600"
+            >
+              ×
+            </button>
+          </div>
+        )}
+
       <div className="mb-6">
         <button
           onClick={() => navigate("/leads")}
@@ -66,6 +125,7 @@ const AddLead = () => {
               value={formData.firstName}
               onChange={handleChange}
               placeholder="John"
+              error={getErrorMessage(fieldErrors.name)}
               required
             />
             <InputGroup
@@ -74,6 +134,7 @@ const AddLead = () => {
               value={formData.lastName}
               onChange={handleChange}
               placeholder="Doe"
+              error={getErrorMessage(fieldErrors.name)}
               required
             />
           </div>
@@ -85,6 +146,7 @@ const AddLead = () => {
             value={formData.email}
             onChange={handleChange}
             placeholder="john.doe@company.com"
+            error={getErrorMessage(fieldErrors.email)}
             required
           />
 
@@ -95,6 +157,7 @@ const AddLead = () => {
               value={formData.company}
               onChange={handleChange}
               placeholder="Acme Inc."
+              error={getErrorMessage(fieldErrors.company)}
               required
             />
             <InputGroup
@@ -103,6 +166,7 @@ const AddLead = () => {
               value={formData.jobTitle}
               onChange={handleChange}
               placeholder="Sales Manager"
+              error={getErrorMessage(fieldErrors.position)}
             />
           </div>
 
@@ -121,6 +185,7 @@ const AddLead = () => {
               value={formData.value}
               onChange={handleChange}
               placeholder="50,00,000"
+              error={getErrorMessage(fieldErrors.value)}
             />
           </div>
 
@@ -188,6 +253,11 @@ const AddLead = () => {
                 handleChange({ target: { name: "platform", value: val } })
               }
             />
+            {fieldErrors.source && (
+              <p className="text-xs text-red-600 mt-1">
+                {getErrorMessage(fieldErrors.source)}
+              </p>
+            )}
             <InputGroup
               id="createdOn"
               label="Created On"
@@ -197,13 +267,18 @@ const AddLead = () => {
           </div>
 
           <Dropdown
-            label="Status"
+            label="Stage"
             options={["New", "Opened", "Interested", "Rejected"]}
             value={formData.status}
             onChange={(val) =>
               handleChange({ target: { name: "status", value: val } })
             }
           />
+          {(fieldErrors.stage || fieldErrors.status) && (
+            <p className="text-xs text-red-600 mt-1">
+              {getErrorMessage(fieldErrors.stage || fieldErrors.status)}
+            </p>
+          )}
 
           <div className="pt-4 flex items-center justify-end gap-3">
             <button
@@ -215,9 +290,10 @@ const AddLead = () => {
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-[#344873] text-white rounded-lg text-sm font-medium hover:bg-[#253860] transition-colors"
+                disabled={loading}
+                className="px-6 py-2 bg-[#344873] text-white rounded-lg text-sm font-medium hover:bg-[#253860] transition-colors disabled:opacity-50"
             >
-              Save Person
+                {loading ? "Saving..." : "Save Person"}
             </button>
           </div>
         </form>
@@ -226,7 +302,7 @@ const AddLead = () => {
   );
 };
 
-const InputGroup = ({ id, label, type = "text", ...props }) => (
+const InputGroup = ({ id, label, type = "text", error, ...props }) => (
   <div>
     <label
       htmlFor={id}
@@ -238,11 +314,14 @@ const InputGroup = ({ id, label, type = "text", ...props }) => (
       type={type}
       id={id}
       name={id}
-      className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${
-        props.disabled ? "bg-gray-50 text-gray-500" : ""
-      }`}
+      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 outline-none transition-all ${
+        error
+          ? "border-red-300 focus:ring-red-200 focus:border-red-400"
+          : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+      } ${props.disabled ? "bg-gray-50 text-gray-500" : ""}`}
       {...props}
     />
+    {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
   </div>
 );
 

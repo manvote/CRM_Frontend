@@ -3,7 +3,7 @@ import { Share2, List, Columns, Search, Filter, Plus } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import LeadsListView from "../components/LeadsListView";
 import LeadsPipelineView from "../components/LeadsPipelineView";
-import { getLeads, deleteLeads, updateLead } from "../utils/leadsStorage";
+import { leadsApi } from "../services/leadsApi";
 
 const Leads = () => {
   const navigate = useNavigate();
@@ -14,9 +14,44 @@ const Leads = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const normalizeLead = (lead) => ({
+    ...lead,
+    status: lead.stage ?? lead.status,
+    jobTitle: lead.position ?? lead.jobTitle,
+    platform: lead.source ?? lead.platform,
+    createdOn: lead.created_at
+      ? new Date(lead.created_at).toLocaleDateString("en-GB")
+      : lead.createdOn,
+  });
+
+  // Fetch leads from backend
+  const fetchLeads = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        setError("Not authenticated. Please log in.");
+        setLoading(false);
+        return;
+      }
+
+      const response = await leadsApi.getLeads();
+      setLeads(response.data.map(normalizeLead));
+    } catch (err) {
+      console.error("Error fetching leads:", err);
+      setError(err.response?.data?.detail || "Failed to load leads");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    setLeads(getLeads());
+    fetchLeads();
   }, []);
 
   useEffect(() => {
@@ -29,10 +64,10 @@ const Leads = () => {
     return leads.filter((lead) => {
       const searchLower = searchQuery.toLowerCase();
       const matchesSearch =
-        lead.name.toLowerCase().includes(searchLower) ||
-        lead.company.toLowerCase().includes(searchLower) ||
-        lead.email.toLowerCase().includes(searchLower) ||
-        lead.status.toLowerCase().includes(searchLower);
+        (lead.name || "").toLowerCase().includes(searchLower) ||
+        (lead.company || "").toLowerCase().includes(searchLower) ||
+        (lead.email || "").toLowerCase().includes(searchLower) ||
+        (lead.status || "").toLowerCase().includes(searchLower);
 
       if (filterStatus === "All") return matchesSearch;
       // Adjusted filters to match new columns if needed, but keeping logic generic for now
@@ -62,14 +97,23 @@ const Leads = () => {
     );
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this lead?")) {
-      setLeads((prev) => prev.filter((l) => l.id !== id));
-      deleteLeads([id]);
+      try {
+        setLoading(true);
+        await leadsApi.deleteLead(id);
+        await fetchLeads();
+        setError("");
+      } catch (err) {
+        console.error("Error deleting lead:", err);
+        setError("Failed to delete lead");
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
-  const handleDragEnd = (result) => {
+  const handleDragEnd = async (result) => {
     const { destination, source, draggableId } = result;
 
     if (!destination) return;
@@ -94,11 +138,23 @@ const Leads = () => {
 
     const leadToUpdate = leads.find((l) => l.id === leadId);
     if (leadToUpdate) {
-      const updatedLead = { ...leadToUpdate, status: newStatus };
+      const updatedLead = {
+        ...leadToUpdate,
+        status: newStatus,
+        stage: newStatus,
+      };
 
+      // Optimistic update
       setLeads((prev) => prev.map((l) => (l.id === leadId ? updatedLead : l)));
 
-      updateLead(updatedLead);
+      // Sync with backend
+      try {
+        await leadsApi.updateLead(leadId, { stage: newStatus });
+      } catch (err) {
+        console.error("Error updating lead:", err);
+        setLeads(leads); // Revert on error
+        setError("Failed to update lead status");
+      }
     }
   };
 
@@ -117,6 +173,18 @@ const Leads = () => {
       className="flex flex-col h-full"
       onClick={() => isFilterOpen && setIsFilterOpen(false)}
     >
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between">
+            <span className="text-sm text-red-600">{error}</span>
+            <button
+              onClick={() => setError("")}
+              className="text-red-400 hover:text-red-600"
+            >
+              ×
+            </button>
+          </div>
+        )}
+
       <div className="flex flex-col space-y-4 mb-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900">Leads</h1>
@@ -220,14 +288,21 @@ const Leads = () => {
           </div>
           <button
             onClick={() => navigate("/leads/new")}
-            className="flex items-center gap-2 px-4 py-2 bg-[#344873] text-white rounded-lg text-sm font-medium hover:bg-[#253860]"
+              disabled={loading}
+              className="flex items-center gap-2 px-4 py-2 bg-[#344873] text-white rounded-lg text-sm font-medium hover:bg-[#253860] disabled:opacity-50"
           >
             <Plus size={16} /> Add People
           </button>
         </div>
       </div>
 
-      {activeTab === "all" ? (
+        {loading && leads.length === 0 && (
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
+        )}
+
+        {!loading && activeTab === "all" ? (
         <LeadsListView
           leads={filteredLeads}
           selectedLeads={selectedLeads}

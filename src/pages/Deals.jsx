@@ -21,12 +21,7 @@ import {
   Download,
 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import {
-  getDeals,
-  saveDeal,
-  updateDeal,
-  deleteDeal,
-} from "../utils/dealsStorage";
+import { dealsApi } from "../services/dealsApi";
 
 const KANBAN_COLUMNS = [
   "Clients",
@@ -39,6 +34,8 @@ const KANBAN_COLUMNS = [
 
 const Deals = () => {
   const [deals, setDeals] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -60,6 +57,31 @@ const Deals = () => {
   const [editingDealId, setEditingDealId] = useState(null);
 
   // Form State
+  // Normalize backend deal data to frontend format
+  const normalizeDeal = (deal) => ({
+    id: deal.id,
+    title: deal.title,
+    desc: deal.description || deal.desc || "",
+    client: deal.client || "Clients",
+    stage: deal.stage || "Clients",
+    status: deal.status || "Open",
+    revenue: deal.amount || deal.revenue || 0,
+    dueDate: deal.due_date || deal.dueDate || "",
+    statusColor:
+      deal.status === "Won"
+        ? "bg-emerald-100 text-emerald-600"
+        : deal.status === "Lost"
+        ? "bg-red-100 text-red-600"
+        : "bg-amber-100 text-amber-600",
+    assignee: deal.assignee ?? [],
+    activity: {
+      comments: deal.activity?.comments || 0,
+      attachments: deal.activity?.attachments || 0,
+      commentsList: deal.activity?.commentsList || [],
+      attachmentsList: deal.activity?.attachmentsList || [],
+    },
+  });
+
   const [formData, setFormData] = useState({
     title: "",
     desc: "",
@@ -75,10 +97,10 @@ const Deals = () => {
     return deals.filter((deal) => {
       const searchLower = searchQuery.toLowerCase();
       const matchesSearch =
-        deal.title.toLowerCase().includes(searchLower) ||
-        deal.client.toLowerCase().includes(searchLower) ||
-        deal.status.toLowerCase().includes(searchLower) ||
-        (deal.desc && deal.desc.toLowerCase().includes(searchLower));
+        (deal.title || "").toLowerCase().includes(searchLower) ||
+        (deal.client || "").toLowerCase().includes(searchLower) ||
+        (deal.status || "").toLowerCase().includes(searchLower) ||
+        (deal.desc || "").toLowerCase().includes(searchLower);
 
       if (filterStatus === "All") return matchesSearch;
       if (filterStatus === "Active")
@@ -92,16 +114,36 @@ const Deals = () => {
     });
   }, [searchQuery, filterStatus, deals]);
 
+  const fetchDeals = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        setError("Not authenticated. Please log in.");
+        setLoading(false);
+        return;
+      }
+
+      const response = await dealsApi.getDeals();
+      setDeals(response.data.map(normalizeDeal));
+    } catch (err) {
+      console.error("Error fetching deals:", err);
+      setError(err.response?.data?.detail || "Failed to load deals");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    setDeals(getDeals());
-    const handleStorageChange = () => setDeals(getDeals());
-    window.addEventListener("storage", handleStorageChange);
+    fetchDeals();
     const handleClickOutside = () => setActiveActionId(null);
     window.addEventListener("click", handleClickOutside);
     return () => {
-      window.removeEventListener("storage", handleStorageChange);
       window.removeEventListener("click", handleClickOutside);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Open modal for Create
@@ -141,61 +183,68 @@ const Deals = () => {
   const handleSaveDeal = async (e) => {
     e.preventDefault();
 
-    let imageBase64 = null;
-    if (formData.file) {
-      imageBase64 = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.readAsDataURL(formData.file);
-      });
-    }
+    try {
+      setLoading(true);
+      setError("");
 
-    const commonData = {
-      ...formData,
-      statusColor:
-        formData.status === "Review"
-          ? "bg-purple-100 text-purple-600"
-          : formData.status === "Pending"
-          ? "bg-yellow-100 text-yellow-600"
-          : "bg-blue-100 text-blue-600",
-      assignee: [
-        { initials: formData.assigneeInitials, color: "bg-purple-500" },
-      ],
-    };
-
-    if (editingDealId) {
-      const originalDeal = deals.find((d) => d.id === editingDealId);
-      const updatedDeal = {
-        id: editingDealId,
-        ...commonData,
-        activity: originalDeal
-          ? originalDeal.activity
-          : { comments: 0, attachments: 0 },
+      const payload = {
+        title: formData.title,
+        desc: formData.desc,
+        client: formData.client,
+        stage: formData.status,
+        status: "Open",
+        revenue: formData.revenue,
+        dueDate: formData.dueDate,
+        assigneeInitials: formData.assigneeInitials,
+        file: formData.file,
       };
 
-      if (originalDeal && !imageBase64) {
-        updatedDeal.image = originalDeal.image;
-      } else if (imageBase64) {
-        updatedDeal.image = imageBase64;
+      if (editingDealId) {
+        await dealsApi.updateDeal(editingDealId, payload);
+      } else {
+        await dealsApi.createDeal(payload);
       }
 
-      updateDeal(updatedDeal);
-    } else {
-      const newDeal = {
-        ...commonData,
-        image: imageBase64,
-        activity: { comments: 0, attachments: 0 },
-      };
-      saveDeal(newDeal);
+      await fetchDeals();
+      setIsModalOpen(false);
+    } catch (err) {
+      console.error("Error saving deal:", err);
+      
+      // Display detailed error messages
+      if (err.response?.data) {
+        const errorData = err.response.data;
+        if (typeof errorData === 'object' && !errorData.detail) {
+          // Field-specific errors
+          const errorMessages = Object.entries(errorData)
+            .map(([field, messages]) => {
+              const msg = Array.isArray(messages) ? messages[0] : messages;
+              return `${field}: ${msg}`;
+            })
+            .join(', ');
+          setError(errorMessages || "Failed to save deal");
+        } else {
+          setError(errorData.detail || errorData.message || "Failed to save deal");
+        }
+      } else {
+        setError(err.message || "Failed to save deal");
+      }
+    } finally {
+      setLoading(false);
     }
-
-    setIsModalOpen(false);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this deal?")) {
-      deleteDeal(id);
-      setDeals(getDeals()); // Refresh deals after delete
+      try {
+        setLoading(true);
+        await dealsApi.deleteDeal(id);
+        await fetchDeals();
+      } catch (err) {
+        console.error("Error deleting deal:", err);
+        setError("Failed to delete deal");
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -204,7 +253,7 @@ const Deals = () => {
     setActiveActionId(activeActionId === id ? null : id);
   };
 
-  const onDragEnd = (result) => {
+  const onDragEnd = async (result) => {
     const { destination, source, draggableId } = result;
 
     if (!destination) return;
@@ -248,7 +297,15 @@ const Deals = () => {
 
       // Update local state immediately for responsiveness
       setDeals(deals.map((d) => (d.id === dealId ? updatedDeal : d)));
-      updateDeal(updatedDeal);
+
+      // Sync with backend
+      try {
+        await dealsApi.updateDeal(dealId, { stage: destStage });
+      } catch (err) {
+        console.error("Error updating deal stage:", err);
+        setDeals(deals);
+        setError("Failed to update deal stage");
+      }
     }
   };
 
@@ -258,106 +315,71 @@ const Deals = () => {
     setActivityModalOpen(true);
   };
 
-  const handleAddComment = (text) => {
+  const handleAddComment = async (text) => {
     if (!currentActivityDeal) return;
-    const newComment = {
-      id: Date.now(),
-      text,
-      author: "You",
-      date: new Date().toLocaleDateString(),
-      initials: "YO",
-    };
 
-    const updatedDeal = {
-      ...currentActivityDeal,
-      activity: {
-        ...currentActivityDeal.activity,
-        // Remove manual count update
-        commentsList: [
-          newComment,
-          ...(currentActivityDeal.activity.commentsList || []),
-        ],
-      },
-    };
+    try {
+      await dealsApi.addComment(currentActivityDeal.id, text);
+      const response = await dealsApi.getDeal(currentActivityDeal.id);
+      const refreshed = normalizeDeal(response.data);
 
-    setDeals(deals.map((d) => (d.id === updatedDeal.id ? updatedDeal : d)));
-    updateDeal(updatedDeal);
-    setCurrentActivityDeal(updatedDeal);
+      setDeals(deals.map((d) => (d.id === refreshed.id ? refreshed : d)));
+      setCurrentActivityDeal(refreshed);
+    } catch (err) {
+      console.error("Error adding comment:", err);
+      setError("Failed to add comment");
+    }
   };
 
-  const handleFileSelect = (e) => {
+  const handleFileSelect = async (e) => {
     const file = e.target.files[0];
-    if (!file) return;
+    if (!file || !currentActivityDeal) return;
 
-    // Limit size to 2MB for LocalStorage safety
-    if (file.size > 2 * 1024 * 1024) {
-      alert("File size exceeds 2MB limit for local storage.");
+    if (file.size > 5 * 1024 * 1024) {
+      alert("File size exceeds 5MB limit.");
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      handleAddAttachment(file, event.target.result);
-    };
-    reader.readAsDataURL(file);
+    try {
+      await dealsApi.addAttachment(currentActivityDeal.id, file);
+      const response = await dealsApi.getDeal(currentActivityDeal.id);
+      const refreshed = normalizeDeal(response.data);
+
+      setDeals(deals.map((d) => (d.id === refreshed.id ? refreshed : d)));
+      setCurrentActivityDeal(refreshed);
+    } catch (err) {
+      console.error("Error adding attachment:", err);
+      setError("Failed to add attachment");
+    }
   };
 
-  const handleAddAttachment = (file, fileData) => {
-    if (!currentActivityDeal) return;
-    const newAttachment = {
-      id: Date.now(),
-      name: file.name,
-      size: (file.size / 1024).toFixed(1) + " KB",
-      date: new Date().toLocaleDateString(),
-      type: file.type,
-      data: fileData, // Base64 content
-    };
-
-    const updatedDeal = {
-      ...currentActivityDeal,
-      activity: {
-        ...currentActivityDeal.activity,
-        // Using list lengths implicitly
-        attachmentsList: [
-          newAttachment,
-          ...(currentActivityDeal.activity.attachmentsList || []),
-        ],
-      },
-    };
-
-    setDeals(deals.map((d) => (d.id === updatedDeal.id ? updatedDeal : d)));
-    updateDeal(updatedDeal);
-    setCurrentActivityDeal(updatedDeal);
-  };
-
-  const handleDeleteAttachment = (attachmentId) => {
+  const handleDeleteAttachment = async (attachmentId) => {
     if (!currentActivityDeal) return;
 
-    const updatedList = (
-      currentActivityDeal.activity.attachmentsList || []
-    ).filter((a) => a.id !== attachmentId);
+    if (!window.confirm("Are you sure you want to delete this attachment?")) {
+      return;
+    }
 
-    const updatedDeal = {
-      ...currentActivityDeal,
-      activity: {
-        ...currentActivityDeal.activity,
-        // Using list lengths implicitly
-        attachmentsList: updatedList,
-      },
-    };
+    try {
+      await dealsApi.deleteAttachment(currentActivityDeal.id, attachmentId);
+      const response = await dealsApi.getDeal(currentActivityDeal.id);
+      const refreshed = normalizeDeal(response.data);
 
-    setDeals(deals.map((d) => (d.id === updatedDeal.id ? updatedDeal : d)));
-    updateDeal(updatedDeal);
-    setCurrentActivityDeal(updatedDeal);
+      setDeals(deals.map((d) => (d.id === refreshed.id ? refreshed : d)));
+      setCurrentActivityDeal(refreshed);
+    } catch (err) {
+      console.error("Error deleting attachment:", err);
+      setError("Failed to delete attachment");
+    }
   };
 
-  const handleClosure = (outcome) => {
+  const handleClosure = async (outcome) => {
     if (!pendingClosureDeal) return;
 
     const updatedDeal = {
       ...pendingClosureDeal,
-      stage: "Status", // Move to Status column
-      status: outcome, // 'Won' or 'Lost'
+      stage: "Status",
+      status: outcome,
       statusColor:
         outcome === "Won"
           ? "bg-emerald-100 text-emerald-600"
@@ -367,7 +389,7 @@ const Deals = () => {
     if (outcome === "Won") {
       addNotification({
         title: "Deal Won! 🎉",
-        message: `Congratulations! You won the deal "${updatedDeal.title}" valued at ₹${updatedDeal.amount}.`,
+        message: `Congratulations! You won the deal "${updatedDeal.title}" valued at ₹${Number(updatedDeal.revenue || updatedDeal.amount || 0).toLocaleString()}.`,
         type: "success",
       });
     }
@@ -375,7 +397,16 @@ const Deals = () => {
     setDeals(
       deals.map((d) => (d.id === pendingClosureDeal.id ? updatedDeal : d))
     );
-    updateDeal(updatedDeal);
+
+    try {
+      await dealsApi.updateDeal(pendingClosureDeal.id, {
+        stage: "Status",
+        status: outcome,
+      });
+    } catch (err) {
+      console.error("Error closing deal:", err);
+      setError("Failed to close deal");
+    }
 
     setIsClosureModalOpen(false);
     setPendingClosureDeal(null);
@@ -393,6 +424,32 @@ const Deals = () => {
           <Plus size={18} /> Add New Deals
         </button>
       </div>
+
+      {/* Error Banner */}
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start justify-between">
+          <div className="flex items-start gap-2">
+            <span className="text-red-600 font-medium">⚠️</span>
+            <div>
+              <p className="text-red-800 font-medium">Error</p>
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setError("")}
+            className="text-red-400 hover:text-red-600"
+          >
+            <X size={18} />
+          </button>
+        </div>
+      )}
+
+      {/* Loading Overlay */}
+      {loading && (
+        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-blue-800 text-sm">Loading deals...</p>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row justify-between items-center mb-8 shrink-0 gap-4 sm:gap-0">
