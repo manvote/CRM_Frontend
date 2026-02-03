@@ -21,9 +21,8 @@ const Signup = () => {
     setSuccess("");
 
     try {
-      // Backend only accepts email and password
-      // Backend creates username from email
-      await authApiService.signup(email, password);
+      // Backend accepts email, password, and optional full_name
+      await authApiService.signup({ email, password, fullName });
 
       setSuccess("Account created successfully! Redirecting to login...");
       
@@ -36,6 +35,9 @@ const Signup = () => {
         err.response?.data?.detail ||
           err.response?.data?.email?.join(", ") ||
           err.response?.data?.password?.join(", ") ||
+          err.response?.data?.username?.join(", ") ||
+          err.response?.data?.full_name?.join(", ") ||
+          err.response?.data?.non_field_errors?.join(", ") ||
           "Signup failed. Email may already be registered."
       );
     } finally {

@@ -51,8 +51,8 @@ authApi.interceptors.response.use(
 );
 
 export const authApiService = {
-  signup: (email, password) =>
-    authApi.post("/signup/", { email, password }),
+  signup: ({ email, password, fullName }) =>
+    authApi.post("/signup/", { email, password, full_name: fullName }),
 
   login: (email, password) =>
     authApi.post("/login/", { email, password }),
