@@ -2,6 +2,9 @@
   command = "npm run build"
   publish = "dist"
 
+[build.environment]
+  VITE_API_BASE_URL = "https://crm-backend-prod.eba-u6tu4mfm.us-west-2.elasticbeanstalk.com/api"
+
 [dev]
   command = "npm run dev"
   port = 3000
