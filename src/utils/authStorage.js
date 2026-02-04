@@ -65,3 +65,50 @@ export const getAccessToken = () => {
 export const getRefreshToken = () => {
   return localStorage.getItem(REFRESH_TOKEN_KEY);
 };
+
+/**
+ * Decode JWT token (without verification - client-side only)
+ * @param {string} token - JWT token
+ * @returns {Object|null} - Decoded payload or null if invalid
+ */
+const decodeToken = (token) => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    console.error('Error decoding token:', error);
+    return null;
+  }
+};
+
+/**
+ * Check if token is expired
+ * @param {string} token - JWT token
+ * @returns {boolean} - True if expired
+ */
+export const isTokenExpired = (token) => {
+  if (!token) return true;
+  
+  const decoded = decodeToken(token);
+  if (!decoded || !decoded.exp) return true;
+  
+  // Check if token expires in the next 30 seconds (buffer time)
+  const currentTime = Date.now() / 1000;
+  return decoded.exp < currentTime + 30;
+};
+
+/**
+ * Check if access token needs refresh
+ * @returns {boolean} - True if token needs refresh
+ */
+export const needsTokenRefresh = () => {
+  const accessToken = getAccessToken();
+  return isTokenExpired(accessToken);
+};

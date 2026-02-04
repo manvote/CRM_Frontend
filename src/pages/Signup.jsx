@@ -13,37 +13,37 @@ const Signup = () => {
   const [success, setSuccess] = useState("");
 
   const navigate = useNavigate();
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setError("");
+  setSuccess("");
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    setSuccess("");
-
-    try {
-      // Backend accepts email, password, and optional full_name
-      await authApiService.signup({ email, password, fullName });
-
-      setSuccess("Account created successfully! Redirecting to login...");
-      
-      // Redirect to login after 2 seconds
-      setTimeout(() => {
-        navigate("/login");
-      }, 2000);
-    } catch (err) {
-      setError(
-        err.response?.data?.detail ||
-          err.response?.data?.email?.join(", ") ||
-          err.response?.data?.password?.join(", ") ||
-          err.response?.data?.username?.join(", ") ||
-          err.response?.data?.full_name?.join(", ") ||
-          err.response?.data?.non_field_errors?.join(", ") ||
-          "Signup failed. Email may already be registered."
-      );
-    } finally {
-      setLoading(false);
+  try {
+    const response = await authApiService.signup({ email, password, fullName });
+    
+    // Store tokens from signup response
+    if (response.data.access && response.data.refresh) {
+      localStorage.setItem("access_token", response.data.access);
+      localStorage.setItem("refresh_token", response.data.refresh);
+      localStorage.setItem("crm_user", JSON.stringify(response.data.user));
     }
-  };
+
+    setSuccess("Account created successfully! Redirecting...");
+    
+    setTimeout(() => {
+      navigate("/dashboard");  // Or wherever you want to redirect
+    }, 2000);
+  } catch (err) {
+    setError(
+      err.response?.data?.detail ||
+      err.response?.data?.email?.join(", ") ||
+      "Signup failed."
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="w-full max-w-sm mx-auto animate-fade-in-up">
