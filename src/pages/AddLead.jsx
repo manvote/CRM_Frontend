@@ -91,15 +91,20 @@ const AddLead = () => {
     setFieldErrors((prev) => ({ ...prev, [mapped]: undefined }));
   };
 
-<<<<<<< HEAD
+  const handleBlur = (e) => {
+    const { name } = e.target;
+    setTouched((prev) => ({ ...prev, [name]: true }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+    if (!isValid) return;
+
     try {
       setLoading(true);
       setError("");
       setFieldErrors({});
-      
+
       await leadsApi.createLead({
         name: `${formData.firstName} ${formData.lastName}`,
         email: formData.email,
@@ -112,7 +117,8 @@ const AddLead = () => {
         value: formData.value || "0",
         notes: `Address: ${formData.street}, ${formData.city}, ${formData.state}, ${formData.zipCode}, ${formData.country}`,
       });
-      
+
+      toast.success("Lead added successfully!");
       navigate("/leads");
     } catch (err) {
       console.error("Error creating lead:", err);
@@ -127,24 +133,6 @@ const AddLead = () => {
     } finally {
       setLoading(false);
     }
-=======
-  const handleBlur = (e) => {
-    const { name } = e.target;
-    setTouched((prev) => ({ ...prev, [name]: true }));
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!isValid) return;
-
-    saveLead({
-      name: `${formData.firstName} ${formData.lastName}`,
-      ...formData,
-    });
-
-    toast.success("Lead added successfully!");
-    navigate("/leads");
->>>>>>> origin/master
   };
 
   return (
@@ -180,9 +168,11 @@ const AddLead = () => {
               value={formData.firstName}
               onChange={handleChange}
               onBlur={handleBlur}
-              error={touched.firstName && errors.firstName}
               placeholder="John"
-              error={getErrorMessage(fieldErrors.name)}
+              error={
+                getErrorMessage(fieldErrors.name) ||
+                (touched.firstName && errors.firstName)
+              }
               required
             />
             <InputGroup
@@ -191,9 +181,11 @@ const AddLead = () => {
               value={formData.lastName}
               onChange={handleChange}
               onBlur={handleBlur}
-              error={touched.lastName && errors.lastName}
               placeholder="Doe"
-              error={getErrorMessage(fieldErrors.name)}
+              error={
+                getErrorMessage(fieldErrors.name) ||
+                (touched.lastName && errors.lastName)
+              }
               required
             />
           </div>
@@ -205,9 +197,11 @@ const AddLead = () => {
             value={formData.email}
             onChange={handleChange}
             onBlur={handleBlur}
-            error={touched.email && errors.email}
             placeholder="john.doe@company.com"
-            error={getErrorMessage(fieldErrors.email)}
+            error={
+              getErrorMessage(fieldErrors.email) ||
+              (touched.email && errors.email)
+            }
             required
           />
 
@@ -218,9 +212,11 @@ const AddLead = () => {
               value={formData.company}
               onChange={handleChange}
               onBlur={handleBlur}
-              error={touched.company && errors.company}
               placeholder="Acme Inc."
-              error={getErrorMessage(fieldErrors.company)}
+              error={
+                getErrorMessage(fieldErrors.company) ||
+                (touched.company && errors.company)
+              }
               required
             />
             <InputGroup
@@ -250,14 +246,12 @@ const AddLead = () => {
               label="Lead Value (Income)"
               value={formData.value}
               onChange={handleChange}
-<<<<<<< HEAD
-              placeholder="50,00,000"
-              error={getErrorMessage(fieldErrors.value)}
-=======
               onBlur={handleBlur}
-              error={touched.value && errors.value}
+              error={
+                getErrorMessage(fieldErrors.value) ||
+                (touched.value && errors.value)
+              }
               placeholder="5000000"
->>>>>>> origin/master
             />
           </div>
 
@@ -362,17 +356,12 @@ const AddLead = () => {
             </button>
             <button
               type="submit"
-<<<<<<< HEAD
-                disabled={loading}
-                className="px-6 py-2 bg-[#344873] text-white rounded-lg text-sm font-medium hover:bg-[#253860] transition-colors disabled:opacity-50"
-=======
-              disabled={!isValid}
+              disabled={loading || !isValid}
               className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors ${
-                isValid
-                  ? "bg-[#344873] text-white hover:bg-[#253860]"
-                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                !isValid || loading
+                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  : "bg-[#344873] text-white hover:bg-[#253860]"
               }`}
->>>>>>> origin/master
             >
                 {loading ? "Saving..." : "Save Person"}
             </button>
@@ -397,20 +386,12 @@ const InputGroup = ({ id, label, type = "text", error, ...props }) => (
       name={id}
       className={`w-full px-4 py-2 border rounded-lg focus:ring-2 outline-none transition-all ${
         error
-<<<<<<< HEAD
-          ? "border-red-300 focus:ring-red-200 focus:border-red-400"
-=======
           ? "border-red-300 focus:ring-red-200 focus:border-red-500"
->>>>>>> origin/master
           : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
       } ${props.disabled ? "bg-gray-50 text-gray-500" : ""}`}
       {...props}
     />
-<<<<<<< HEAD
-    {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
-=======
     {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
->>>>>>> origin/master
   </div>
 );
 

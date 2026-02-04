@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { dealsApi } from "../services/dealsApi";
 import { leadsApi } from "../services/leadsApi";
-import { tasksApi } from "../services/tasksApi";
 import {
   BarChart,
   Bar,
@@ -30,9 +29,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [leads, setLeads] = useState([]);
   const [deals, setDeals] = useState([]);
-<<<<<<< HEAD
-  const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -52,9 +49,6 @@ const Dashboard = () => {
       const leadsResponse = await leadsApi.getLeads();
       setLeads(leadsResponse.data || []);
 
-      // Fetch tasks
-      const tasksResponse = await tasksApi.getTasks();
-      setTasks(tasksResponse.data || []);
     } catch (err) {
       console.error("Error fetching dashboard data:", err);
       setError(err.response?.data?.detail || "Failed to load dashboard data");
@@ -62,45 +56,16 @@ const Dashboard = () => {
       setLoading(false);
     }
   };
-
-  // Stats
-=======
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Simulate slight loading for realistic feel
-    setTimeout(() => {
-      setLeads(getLeads());
-      setDeals(getDeals());
-      setLoading(false);
-    }, 500);
-  }, []);
-
   // --- KPI CALCS ---
->>>>>>> origin/master
   const totalLeads = leads.length;
   const wonDeals = deals.filter((d) => d.status === "Won");
   const lostDeals = deals.filter((d) => d.status === "Lost");
   const totalClosed = wonDeals.length + lostDeals.length;
   const conversionRate =
     totalClosed > 0 ? Math.round((wonDeals.length / totalClosed) * 100) : 0;
-
-<<<<<<< HEAD
-  // Calculate Satisfaction Rate based on Won Deals / Total Closed (Won + Lost)
-  const wonDeals = deals.filter((d) => d.status === "won").length;
-  const lostDeals = deals.filter((d) => d.status === "lost").length;
-  const totalClosed = wonDeals + lostDeals;
-  const satisfactionRate =
-    totalClosed > 0 ? Math.round((wonDeals / totalClosed) * 100) : 0;
-=======
   const revenueForecast = deals
     .filter((d) => d.status !== "Lost" && d.status !== "Won")
     .reduce((sum, d) => sum + Number(d.revenue || d.amount || 0), 0);
-
-  const totalRevenue = wonDeals.reduce(
-    (sum, d) => sum + Number(d.revenue || d.amount || 0),
-    0,
-  );
 
   // --- CHART DATA PREP ---
 
@@ -129,7 +94,6 @@ const Dashboard = () => {
       fill: "#d946ef",
     },
   ];
->>>>>>> origin/master
 
   // Revenue Trend (Mock Monthly for now as we don't have historical snapshots)
   // We'll distribute current won deals across months based on dueDate random mock or creates
@@ -157,27 +121,6 @@ const Dashboard = () => {
   }
 
   return (
-<<<<<<< HEAD
-    <div className="space-y-6">
-      {/* Loading State */}
-      {loading && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-          Loading dashboard data...
-        </div>
-      )}
-
-      {/* Error State */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-          ⚠️ {error}
-        </div>
-      )}
-
-      {/* Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <StatCard
-          label="Total Leads Collected"
-=======
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
@@ -186,11 +129,16 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+          ⚠️ {error}
+        </div>
+      )}
+
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
           title="Total Leads"
->>>>>>> origin/master
           value={totalLeads}
           icon={<Users className="text-blue-600" size={20} />}
           trend="+12%"
@@ -332,142 +280,6 @@ const Dashboard = () => {
               View All
             </button>
           </div>
-<<<<<<< HEAD
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="text-left text-sm text-gray-500 border-b border-gray-100">
-                  <th className="pb-3 font-normal">Deal Name</th>
-                  <th className="pb-3 font-normal">Client</th>
-                  <th className="pb-3 font-normal">Due date</th>
-                  <th className="pb-3 font-normal">Value</th>
-                  <th className="pb-3 font-normal">Status</th>
-                </tr>
-              </thead>
-              <tbody className="text-sm">
-                {deals.slice(0, 3).map((deal) => (
-                  <DealRow
-                    key={deal.id}
-                    avatar={
-                      deal.file ||
-                      `https://api.dicebear.com/7.x/initials/svg?seed=${deal.client}`
-                    }
-                    name={deal.title}
-                    email={deal.client}
-                    client={deal.client}
-                    date={deal.due_date || "N/A"}
-                    revenue={`₹${Number(deal.amount || 0).toLocaleString()}`}
-                    status={deal.status?.charAt(0).toUpperCase() + deal.status?.slice(1) || "Active"}
-                    statusColor={
-                      deal.status === "won"
-                        ? "bg-green-100 text-green-800"
-                        : deal.status === "lost"
-                        ? "bg-red-100 text-red-800"
-                        : deal.status === "active"
-                        ? "bg-blue-100 text-blue-800"
-                        : "bg-gray-100 text-gray-800"
-                    }
-                  />
-                ))}
-                {deals.length === 0 && (
-                  <tr>
-                    <td colSpan="5" className="text-center py-4 text-gray-400">
-                      No active deals found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Activity */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-          <h3 className="text-lg font-bold text-gray-800 mb-6">
-            Recent Activity
-          </h3>
-          <div className="space-y-6">
-            {/* Static for now as global activity log isn't implemented fully yet */}
-            <ActivityItem
-              avatar="https://api.dicebear.com/7.x/avataaars/svg?seed=Chris"
-              name="Chris Daniel"
-              action="Worksheet updated"
-              bgColor="bg-yellow-400"
-            />
-            <ActivityItem
-              avatar="https://api.dicebear.com/7.x/avataaars/svg?seed=Nisha"
-              name="Nisha"
-              action="Followed up with John"
-              bgColor="bg-teal-600"
-            />
-            <ActivityItem
-              avatar="https://api.dicebear.com/7.x/avataaars/svg?seed=Madesh"
-              name="Madesh"
-              action="Evaluation designated"
-              bgColor="bg-blue-500"
-            />
-          </div>
-        </div>
-
-        {/* Marketing Performance */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-gray-800">
-              Marketing Performance
-            </h3>
-            <button className="text-sm text-gray-500 flex items-center gap-1 border border-gray-200 rounded px-2 py-0.5">
-              Month <ChevronDown size={14} />
-            </button>
-          </div>
-          <div className="flex-1 relative mt-4 h-40 w-full">
-            <div className="absolute top-0 right-1/2 translate-x-1/2 -mt-2 bg-white shadow-md p-2 rounded-lg z-10 border border-gray-50">
-              <div className="text-[10px] text-gray-400">Average Hours</div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-sm font-bold">220hrs</span>
-                <span className="text-[10px] text-green-500 font-medium">
-                  +3.4%
-                </span>
-              </div>
-            </div>
-            <svg
-              viewBox="0 0 100 40"
-              className="w-full h-full text-indigo-500 opacity-80"
-              preserveAspectRatio="none"
-            >
-              <defs>
-                <linearGradient id="gradient" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0%" stopColor="#818cf8" stopOpacity="0.4" />
-                  <stop offset="100%" stopColor="#818cf8" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-              <path
-                d="M0 35 C 10 35, 10 20, 20 20 C 30 20, 30 30, 40 30 C 50 30, 50 15, 60 25 C 70 35, 70 5, 80 15 C 90 25, 90 20, 100 20 V 40 H 0 Z"
-                fill="url(#gradient)"
-              />
-              <path
-                d="M0 35 C 10 35, 10 20, 20 20 C 30 20, 30 30, 40 30 C 50 30, 50 15, 60 25 C 70 35, 70 5, 80 15 C 90 25, 90 20, 100 20"
-                stroke="#818cf8"
-                strokeWidth="0.8"
-                fill="none"
-              />
-            </svg>
-          </div>
-          <div className="flex justify-between text-xs text-gray-500 font-medium mt-2">
-            <span>Total Hrs</span>
-            <span>Active Hrs</span>
-          </div>
-        </div>
-
-        {/* AI Suggestions */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-          <h3 className="text-lg font-bold text-gray-800 mb-6">
-            AI Suggestions
-          </h3>
-=======
->>>>>>> origin/master
           <div className="space-y-4">
             {deals.slice(0, 4).map((deal) => (
               <div

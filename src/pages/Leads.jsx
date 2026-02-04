@@ -12,20 +12,11 @@ import { useNavigate, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import LeadsListView from "../components/LeadsListView";
 import LeadsPipelineView from "../components/LeadsPipelineView";
-<<<<<<< HEAD
 import { leadsApi } from "../services/leadsApi";
-=======
 import Tooltip from "../components/common/Tooltip";
 import ConfirmationModal from "../components/common/ConfirmationModal";
-import {
-  getLeads,
-  deleteLeads,
-  updateLead,
-  saveLead,
-} from "../utils/leadsStorage";
 import { exportToCSV } from "../utils/exportUtils";
 import { hasPermission, PERMISSIONS } from "../utils/permissions";
->>>>>>> origin/master
 
 const Leads = () => {
   const navigate = useNavigate();
@@ -168,55 +159,28 @@ const Leads = () => {
     );
   };
 
-<<<<<<< HEAD
-  const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this lead?")) {
-      try {
-        setLoading(true);
-        await leadsApi.deleteLead(id);
-        await fetchLeads();
-        setError("");
-      } catch (err) {
-        console.error("Error deleting lead:", err);
-        setError("Failed to delete lead");
-      } finally {
-        setLoading(false);
-      }
-    }
-=======
   const confirmDelete = (id) => {
     setDeleteModal({ isOpen: true, leadId: id });
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     const id = deleteModal.leadId;
     if (!id) return;
 
-    // Optimistic UI Update
-    const leadToDelete = leads.find((l) => l.id === id);
-    setLeads((prev) => prev.filter((l) => l.id !== id));
-    deleteLeads([id]);
-
-    toast.success((t) => (
-      <span className="flex items-center gap-2">
-        Lead deleted
-        <button
-          onClick={() => {
-            // Undo Action
-            saveLead(leadToDelete); // Re-save the lead
-            setLeads(getLeads()); // Refresh state
-            toast.dismiss(t.id);
-            toast.success("Action undone");
-          }}
-          className="px-2 py-1 bg-gray-800 text-white text-xs rounded hover:bg-gray-700"
-        >
-          Undo
-        </button>
-      </span>
-    ));
-
-    setDeleteModal({ isOpen: false, leadId: null });
->>>>>>> origin/master
+    try {
+      setLoading(true);
+      await leadsApi.deleteLead(id);
+      await fetchLeads();
+      setError("");
+      toast.success("Lead deleted");
+    } catch (err) {
+      console.error("Error deleting lead:", err);
+      setError("Failed to delete lead");
+      toast.error("Failed to delete lead");
+    } finally {
+      setLoading(false);
+      setDeleteModal({ isOpen: false, leadId: null });
+    }
   };
 
   const handleDragEnd = async (result) => {
