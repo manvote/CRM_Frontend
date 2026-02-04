@@ -1,7 +1,7 @@
 import axios from "axios";
 import { isTokenExpired, getRefreshToken } from "../utils/authStorage";
 
-const API_BASE_URL = "http://crm-backend-prod.eba-u6tu4mfm.us-west-2.elasticbeanstalk.com/api";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://crm-backend-prod.eba-u6tu4mfm.us-west-2.elasticbeanstalk.com/api";
 
 const authApi = axios.create({
   baseURL: API_BASE_URL,
