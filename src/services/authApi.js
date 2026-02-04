@@ -2,6 +2,15 @@ import axios from "axios";
 import { isTokenExpired, getRefreshToken } from "../utils/authStorage";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://crmbackend-production-dc4a.up.railway.app/api";
+const API_BASE_URL_KEY = "crm_api_base_url";
+
+const storedBaseUrl = localStorage.getItem(API_BASE_URL_KEY);
+if (storedBaseUrl && storedBaseUrl !== API_BASE_URL) {
+  localStorage.removeItem("access_token");
+  localStorage.removeItem("refresh_token");
+  localStorage.removeItem("crm_user");
+}
+localStorage.setItem(API_BASE_URL_KEY, API_BASE_URL);
 
 const authApi = axios.create({
   baseURL: API_BASE_URL,
@@ -28,37 +37,53 @@ const processQueue = (error, token = null) => {
 // Add token to requests and refresh if needed
 authApi.interceptors.request.use(
   async (config) => {
+    const unauthenticatedEndpoints = [
+      "/login/",
+      "/signup/",
+      "/token/refresh/",
+      "/auth/google/",
+    ];
+
+    const requestUrl = config?.url || "";
+    const isUnauthenticatedRequest = unauthenticatedEndpoints.some((endpoint) =>
+      requestUrl.includes(endpoint)
+    );
+
+    if (isUnauthenticatedRequest) {
+      return config;
+    }
+
     let token = localStorage.getItem("access_token");
-    
+
     // Check if token is expired or about to expire
     if (token && isTokenExpired(token)) {
       const refreshToken = getRefreshToken();
-      
+
       if (refreshToken && !isRefreshing) {
         isRefreshing = true;
-        
+
         try {
           const response = await axios.post(`${API_BASE_URL}/token/refresh/`, {
             refresh: refreshToken,
           });
-          
+
           const newAccessToken = response.data.access;
           localStorage.setItem("access_token", newAccessToken);
           token = newAccessToken;
-          
+
           processQueue(null, newAccessToken);
         } catch (error) {
           processQueue(error, null);
-          
+
           // Clear auth data on refresh failure
           localStorage.removeItem("access_token");
           localStorage.removeItem("refresh_token");
           localStorage.removeItem("crm_user");
-          
+
           if (!window.location.pathname.includes("/login")) {
             window.location.href = "/login";
           }
-          
+
           return Promise.reject(error);
         } finally {
           isRefreshing = false;
@@ -75,11 +100,11 @@ authApi.interceptors.request.use(
           .catch((err) => Promise.reject(err));
       }
     }
-    
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
+
     return config;
   },
   (error) => Promise.reject(error)
