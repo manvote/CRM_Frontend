@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
+import toast from "react-hot-toast";
 import Dropdown from "../components/common/Dropdown";
 import { leadsApi } from "../services/leadsApi";
 
@@ -48,6 +49,41 @@ const AddLead = () => {
   const getErrorMessage = (value) =>
     Array.isArray(value) ? value.join(" ") : value;
 
+  const [errors, setErrors] = useState({});
+  const [touched, setTouched] = useState({});
+  const [isValid, setIsValid] = useState(false);
+
+  // Validation Rules
+  const validate = (data) => {
+    const newErrors = {};
+
+    if (!data.firstName.trim()) newErrors.firstName = "First name is required";
+    if (!data.lastName.trim()) newErrors.lastName = "Last name is required";
+    if (!data.company.trim()) newErrors.company = "Company is required";
+
+    if (!data.email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+      newErrors.email = "Invalid email format";
+    }
+
+    if (data.website && !/^https?:\/\/.+/.test(data.website)) {
+      newErrors.website = "URL must start with http:// or https://";
+    }
+
+    if (data.value && isNaN(Number(data.value.replace(/,/g, "")))) {
+      newErrors.value = "Value must be a number";
+    }
+
+    return newErrors;
+  };
+
+  useEffect(() => {
+    const errorList = validate(formData);
+    setErrors(errorList);
+    setIsValid(Object.keys(errorList).length === 0);
+  }, [formData]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -55,6 +91,7 @@ const AddLead = () => {
     setFieldErrors((prev) => ({ ...prev, [mapped]: undefined }));
   };
 
+<<<<<<< HEAD
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -90,6 +127,24 @@ const AddLead = () => {
     } finally {
       setLoading(false);
     }
+=======
+  const handleBlur = (e) => {
+    const { name } = e.target;
+    setTouched((prev) => ({ ...prev, [name]: true }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!isValid) return;
+
+    saveLead({
+      name: `${formData.firstName} ${formData.lastName}`,
+      ...formData,
+    });
+
+    toast.success("Lead added successfully!");
+    navigate("/leads");
+>>>>>>> origin/master
   };
 
   return (
@@ -124,6 +179,8 @@ const AddLead = () => {
               label="First Name"
               value={formData.firstName}
               onChange={handleChange}
+              onBlur={handleBlur}
+              error={touched.firstName && errors.firstName}
               placeholder="John"
               error={getErrorMessage(fieldErrors.name)}
               required
@@ -133,6 +190,8 @@ const AddLead = () => {
               label="Last Name"
               value={formData.lastName}
               onChange={handleChange}
+              onBlur={handleBlur}
+              error={touched.lastName && errors.lastName}
               placeholder="Doe"
               error={getErrorMessage(fieldErrors.name)}
               required
@@ -145,6 +204,8 @@ const AddLead = () => {
             type="email"
             value={formData.email}
             onChange={handleChange}
+            onBlur={handleBlur}
+            error={touched.email && errors.email}
             placeholder="john.doe@company.com"
             error={getErrorMessage(fieldErrors.email)}
             required
@@ -156,6 +217,8 @@ const AddLead = () => {
               label="Company"
               value={formData.company}
               onChange={handleChange}
+              onBlur={handleBlur}
+              error={touched.company && errors.company}
               placeholder="Acme Inc."
               error={getErrorMessage(fieldErrors.company)}
               required
@@ -165,6 +228,7 @@ const AddLead = () => {
               label="Job Title"
               value={formData.jobTitle}
               onChange={handleChange}
+              onBlur={handleBlur}
               placeholder="Sales Manager"
               error={getErrorMessage(fieldErrors.position)}
             />
@@ -177,6 +241,8 @@ const AddLead = () => {
               type="url"
               value={formData.website}
               onChange={handleChange}
+              onBlur={handleBlur}
+              error={touched.website && errors.website}
               placeholder="https://example.com"
             />
             <InputGroup
@@ -184,8 +250,14 @@ const AddLead = () => {
               label="Lead Value (Income)"
               value={formData.value}
               onChange={handleChange}
+<<<<<<< HEAD
               placeholder="50,00,000"
               error={getErrorMessage(fieldErrors.value)}
+=======
+              onBlur={handleBlur}
+              error={touched.value && errors.value}
+              placeholder="5000000"
+>>>>>>> origin/master
             />
           </div>
 
@@ -290,8 +362,17 @@ const AddLead = () => {
             </button>
             <button
               type="submit"
+<<<<<<< HEAD
                 disabled={loading}
                 className="px-6 py-2 bg-[#344873] text-white rounded-lg text-sm font-medium hover:bg-[#253860] transition-colors disabled:opacity-50"
+=======
+              disabled={!isValid}
+              className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors ${
+                isValid
+                  ? "bg-[#344873] text-white hover:bg-[#253860]"
+                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              }`}
+>>>>>>> origin/master
             >
                 {loading ? "Saving..." : "Save Person"}
             </button>
@@ -308,7 +389,7 @@ const InputGroup = ({ id, label, type = "text", error, ...props }) => (
       htmlFor={id}
       className="block text-sm font-medium text-gray-700 mb-1"
     >
-      {label}
+      {label} {props.required && <span className="text-red-500">*</span>}
     </label>
     <input
       type={type}
@@ -316,12 +397,20 @@ const InputGroup = ({ id, label, type = "text", error, ...props }) => (
       name={id}
       className={`w-full px-4 py-2 border rounded-lg focus:ring-2 outline-none transition-all ${
         error
+<<<<<<< HEAD
           ? "border-red-300 focus:ring-red-200 focus:border-red-400"
+=======
+          ? "border-red-300 focus:ring-red-200 focus:border-red-500"
+>>>>>>> origin/master
           : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
       } ${props.disabled ? "bg-gray-50 text-gray-500" : ""}`}
       {...props}
     />
+<<<<<<< HEAD
     {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
+=======
+    {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+>>>>>>> origin/master
   </div>
 );
 

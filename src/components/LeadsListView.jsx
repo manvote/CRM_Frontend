@@ -110,7 +110,7 @@ const LeadsListView = ({
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span
                     className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(
-                      lead.status
+                      lead.status,
                     )}`}
                   >
                     {lead.status}
